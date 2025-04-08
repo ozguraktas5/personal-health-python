@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Ana Sayfa - Sağlık Takip{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row align-items-center min-vh-100">
+        <div class="col-md-6">
+            <h1 class="display-4 mb-4">Sağlığınızı Takip Edin</h1>
+            <p class="lead mb-4">
+                Kişisel sağlık hedeflerinizi belirleyin, ilerlemenizi takip edin ve daha sağlıklı bir yaşam için motive olun.
+            </p>
+            <div class="d-grid gap-2 d-md-flex">
+                <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg me-md-2">Hemen Başla</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">Giriş Yap</a>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card border-0 bg-light">
+                <div class="card-body">
+                    <h5 class="card-title mb-4">Özellikler</h5>
+                    <div class="row g-4">
+                        <div class="col-sm-6">
+                            <div class="feature-item">
+                                <i class="fas fa-weight fa-2x mb-3 text-primary"></i>
+                                <h6>Kilo Takibi</h6>
+                                <p class="small text-muted">Kilo değişimlerinizi günlük olarak takip edin.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="feature-item">
+                                <i class="fas fa-running fa-2x mb-3 text-primary"></i>
+                                <h6>Egzersiz Kaydı</h6>
+                                <p class="small text-muted">Egzersiz aktivitelerinizi ve sürelerini kaydedin.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="feature-item">
+                                <i class="fas fa-glass-water fa-2x mb-3 text-primary"></i>
+                                <h6>Su Tüketimi</h6>
+                                <p class="small text-muted">Günlük su tüketiminizi takip edin.</p>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="feature-item">
+                                <i class="fas fa-utensils fa-2x mb-3 text-primary"></i>
+                                <h6>Beslenme Takibi</h6>
+                                <p class="small text-muted">Öğünlerinizi ve besin değerlerini kaydedin.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.feature-item {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+}
+
+.feature-item:hover {
+    transform: translateY(-5px);
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+body {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+</style>
+{% endblock %} 

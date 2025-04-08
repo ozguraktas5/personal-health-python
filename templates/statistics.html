@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block title %}İstatistikler - Sağlık Takip{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" rel="stylesheet">
+<style>
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 1rem;
+}
+.stat-card {
+    transition: transform 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-5px);
+}
+.date-filter {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Tarih Filtresi -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">İstatistikler</h5>
+                        <div class="date-filter" id="dateRange">
+                            <i class="fas fa-calendar me-2"></i>
+                            <span>Son 30 Gün</span>
+                            <i class="fas fa-chevron-down ms-2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Özet İstatistikler -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Ortalama Günlük Kalori</h6>
+                    <h3 class="card-title" id="avgCalories">-- kcal</h3>
+                    <div class="small text-muted">
+                        <span id="caloriesTrend"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Ortalama Günlük Su</h6>
+                    <h3 class="card-title" id="avgWater">-- ml</h3>
+                    <div class="small text-muted">
+                        <span id="waterTrend"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Ortalama Egzersiz Süresi</h6>
+                    <h3 class="card-title" id="avgExercise">-- dk</h3>
+                    <div class="small text-muted">
+                        <span id="exerciseTrend"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <h6 class="card-subtitle mb-2 text-muted">Kilo Değişimi</h6>
+                    <h3 class="card-title" id="weightChange">-- kg</h3>
+                    <div class="small text-muted">
+                        <span id="weightTrend"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grafikler -->
+    <div class="row">
+        <!-- Kilo Takibi -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Kilo Takibi</h5>
+                    <div class="chart-container">
+                        <canvas id="weightChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kalori Alımı -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Günlük Kalori Alımı</h5>
+                    <div class="chart-container">
+                        <canvas id="caloriesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Su Tüketimi -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Su Tüketimi</h5>
+                    <div class="chart-container">
+                        <canvas id="waterChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Egzersiz Analizi -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Egzersiz Analizi</h5>
+                    <div class="chart-container">
+                        <canvas id="exerciseChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Besin Değerleri Dağılımı -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Besin Değerleri Dağılımı</h5>
+                    <div class="chart-container">
+                        <canvas id="nutritionChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Egzersiz Türleri Dağılımı -->
+        <div class="col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Egzersiz Türleri Dağılımı</h5>
+                    <div class="chart-container">
+                        <canvas id="exerciseTypesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script>
+$(document).ready(function() {
+    // Tarih filtresi
+    $('#dateRange').daterangepicker({
+        ranges: {
+            'Son 7 Gün': [moment().subtract(6, 'days'), moment()],
+            'Son 30 Gün': [moment().subtract(29, 'days'), moment()],
+            'Bu Ay': [moment().startOf('month'), moment().endOf('month')],
+            'Geçen Ay': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+        },
+        startDate: moment().subtract(29, 'days'),
+        endDate: moment(),
+        locale: {
+            format: 'DD/MM/YYYY',
+            applyLabel: 'Uygula',
+            cancelLabel: 'İptal',
+            customRangeLabel: 'Özel Aralık',
+            daysOfWeek: ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'],
+            monthNames: ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+        }
+    }, function(start, end) {
+        $('#dateRange span').html(start.format('DD/MM/YYYY') + ' - ' + end.format('DD/MM/YYYY'));
+        loadStatistics(start.format('YYYY-MM-DD'), end.format('YYYY-MM-DD'));
+    });
+
+    // Grafik ayarları
+    Chart.defaults.color = '#666';
+    Chart.defaults.font.family = "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif";
+
+    // Grafikleri oluştur
+    let weightChart = new Chart(document.getElementById('weightChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Kilo (kg)',
+                data: [],
+                borderColor: '#0d6efd',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    let caloriesChart = new Chart(document.getElementById('caloriesChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Kalori (kcal)',
+                data: [],
+                backgroundColor: '#198754'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    let waterChart = new Chart(document.getElementById('waterChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Su (ml)',
+                data: [],
+                borderColor: '#0dcaf0',
+                fill: true,
+                backgroundColor: 'rgba(13, 202, 240, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    let exerciseChart = new Chart(document.getElementById('exerciseChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Süre (dk)',
+                data: [],
+                backgroundColor: '#ffc107'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    let nutritionChart = new Chart(document.getElementById('nutritionChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Protein', 'Karbonhidrat', 'Yağ'],
+            datasets: [{
+                data: [0, 0, 0],
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+    let exerciseTypesChart = new Chart(document.getElementById('exerciseTypesChart').getContext('2d'), {
+        type: 'pie',
+        data: {
+            labels: ['Yürüyüş', 'Koşu', 'Bisiklet', 'Yüzme', 'Spor Salonu', 'Diğer'],
+            datasets: [{
+                data: [0, 0, 0, 0, 0, 0],
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#dc3545', '#6c757d']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+<div class="row">
+    <!-- Water Intake Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-gradient-info text-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-glass-water me-2"></i>
+                    <h4 class="card-title mb-0">Water Intake</h4>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="waterChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-dark text-white">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-calculator me-2"></i>
+                    <h4 class="card-title mb-0">Summary Statistics</h4>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <h5>Average Weight</h5>
+                            <p class="h3 text-primary">{{ "%.1f"|format(stats.avg_weight|float) }} kg</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <h5>Weight Change</h5>
+                            <p class="h3 {% if stats.weight_change > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ "%.1f"|format(stats.weight_change|float) }} kg
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <h5>Exercise Time</h5>
+                            <p class="h3 text-success">{{ stats.total_exercise }} min</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="border rounded p-3 text-center">
+                            <h5>Calories Burned</h5>
+                            <p class="h3 text-success">{{ stats.total_calories }} kcal</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Weight Chart
+const weightCtx = document.getElementById('weightChart').getContext('2d');
+new Chart(weightCtx, {
+    type: 'line',
+    data: {
+        labels: {{ weight_dates|tojson }},
+        datasets: [{
+            label: 'Weight (kg)',
+            data: {{ weight_data|tojson }},
+            borderColor: '#2196F3',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Weight Progress Over Time'
+            }
+        }
+    }
+});
+
+// Exercise Chart
+const exerciseCtx = document.getElementById('exerciseChart').getContext('2d');
+new Chart(exerciseCtx, {
+    type: 'bar',
+    data: {
+        labels: {{ exercise_dates|tojson }},
+        datasets: [{
+            label: 'Duration (minutes)',
+            data: {{ exercise_durations|tojson }},
+            backgroundColor: '#4CAF50'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Daily Exercise Duration'
+            }
+        }
+    }
+});
+
+// Water Intake Chart
+const waterCtx = document.getElementById('waterChart').getContext('2d');
+new Chart(waterCtx, {
+    type: 'line',
+    data: {
+        labels: {{ water_dates|tojson }},
+        datasets: [{
+            label: 'Water (ml)',
+            data: {{ water_amounts|tojson }},
+            borderColor: '#00BCD4',
+            tension: 0.1
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Water Intake Over Time'
+            }
+        }
+    }
+});
+</script>
+{% endblock %} 

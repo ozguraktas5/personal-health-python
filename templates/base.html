@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sağlık Takip{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .nav-link {
+            color: #333;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .nav-link:hover {
+            background-color: #e9ecef;
+        }
+        .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .content {
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .reminder-badge {
+            position: relative;
+            display: inline-block;
+        }
+        .reminder-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #dc3545;
+            color: white;
+            border-radius: 50%;
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky">
+                    <div class="text-center mb-4">
+                        <h4>Sağlık Takip</h4>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}" href="{{ url_for('dashboard') }}">
+                                <i class="fas fa-home me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'statistics' %}active{% endif %}" href="{{ url_for('statistics') }}">
+                                <i class="fas fa-chart-line me-2"></i>İstatistikler
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link reminder-badge" href="#" data-bs-toggle="modal" data-bs-target="#remindersModal">
+                                <i class="fas fa-bell me-2"></i>Hatırlatıcılar
+                                <span class="reminder-count" id="reminderCount">0</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i>Çıkış
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 content">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Reminders Modal -->
+    <div class="modal fade" id="remindersModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Hatırlatıcılar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="remindersList"></div>
+                    <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addReminderModal">
+                        <i class="fas fa-plus me-2"></i>Yeni Hatırlatıcı
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Reminder Modal -->
+    <div class="modal fade" id="addReminderModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Yeni Hatırlatıcı</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="reminderForm">
+                        <div class="mb-3">
+                            <label class="form-label">Başlık</label>
+                            <input type="text" class="form-control" name="title" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Açıklama</label>
+                            <textarea class="form-control" name="description"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Tür</label>
+                            <select class="form-select" name="reminder_type" required>
+                                <option value="water">Su İçme</option>
+                                <option value="exercise">Egzersiz</option>
+                                <option value="meal">Öğün</option>
+                                <option value="weight">Tartılma</option>
+                                <option value="medication">İlaç</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sıklık</label>
+                            <select class="form-select" name="frequency" id="frequency" required>
+                                <option value="daily">Günlük</option>
+                                <option value="weekly">Haftalık</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Saat</label>
+                            <input type="time" class="form-control" name="time" required>
+                        </div>
+                        <div class="mb-3" id="daysSelection" style="display: none;">
+                            <label class="form-label">Günler</label>
+                            <div class="btn-group d-flex flex-wrap" role="group">
+                                <input type="checkbox" class="btn-check" name="days" value="monday" id="monday">
+                                <label class="btn btn-outline-primary" for="monday">Pzt</label>
+                                <input type="checkbox" class="btn-check" name="days" value="tuesday" id="tuesday">
+                                <label class="btn btn-outline-primary" for="tuesday">Sal</label>
+                                <input type="checkbox" class="btn-check" name="days" value="wednesday" id="wednesday">
+                                <label class="btn btn-outline-primary" for="wednesday">Çar</label>
+                                <input type="checkbox" class="btn-check" name="days" value="thursday" id="thursday">
+                                <label class="btn btn-outline-primary" for="thursday">Per</label>
+                                <input type="checkbox" class="btn-check" name="days" value="friday" id="friday">
+                                <label class="btn btn-outline-primary" for="friday">Cum</label>
+                                <input type="checkbox" class="btn-check" name="days" value="saturday" id="saturday">
+                                <label class="btn btn-outline-primary" for="saturday">Cmt</label>
+                                <input type="checkbox" class="btn-check" name="days" value="sunday" id="sunday">
+                                <label class="btn btn-outline-primary" for="sunday">Paz</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+        // Hatırlatıcı kontrolü
+        function checkReminders() {
+            $.get('/api/reminders/check', function(reminders) {
+                if (reminders.length > 0) {
+                    $('#reminderCount').text(reminders.length);
+                    // Bildirim göster
+                    if (Notification.permission === "granted") {
+                        reminders.forEach(function(reminder) {
+                            new Notification(reminder.title, {
+                                body: reminder.description || 'Hatırlatıcı zamanı geldi!',
+                                icon: '/static/icon.png'
+                            });
+                        });
+                    }
+                }
+            });
+        }
+
+        // Hatırlatıcıları listele
+        function loadReminders() {
+            $.get('/api/reminders', function(reminders) {
+                const remindersList = $('#remindersList');
+                remindersList.empty();
+                
+                reminders.forEach(function(reminder) {
+                    const reminderHtml = `
+                        <div class="card mb-2">
+                            <div class="card-body">
+                                <h6 class="card-title">${reminder.title}</h6>
+                                <p class="card-text small">${reminder.description || ''}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        ${reminder.time} - 
+                                        ${reminder.frequency === 'daily' ? 'Günlük' : 'Haftalık'}
+                                    </small>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary edit-reminder" 
+                                                data-id="${reminder.id}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger delete-reminder" 
+                                                data-id="${reminder.id}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    remindersList.append(reminderHtml);
+                });
+            });
+        }
+
+        // Sayfa yüklendiğinde
+        $(document).ready(function() {
+            // Bildirim izni iste
+            if (Notification.permission !== "granted") {
+                Notification.requestPermission();
+            }
+
+            // Hatırlatıcıları yükle
+            loadReminders();
+
+            // Her dakika hatırlatıcıları kontrol et
+            setInterval(checkReminders, 60000);
+
+            // Sıklık seçimi değiştiğinde
+            $('#frequency').change(function() {
+                if ($(this).val() === 'weekly') {
+                    $('#daysSelection').show();
+                } else {
+                    $('#daysSelection').hide();
+                }
+            });
+
+            // Hatırlatıcı formu gönderildiğinde
+            $('#reminderForm').submit(function(e) {
+                e.preventDefault();
+                const formData = {
+                    title: $('input[name="title"]').val(),
+                    description: $('textarea[name="description"]').val(),
+                    reminder_type: $('select[name="reminder_type"]').val(),
+                    frequency: $('select[name="frequency"]').val(),
+                    time: $('input[name="time"]').val(),
+                    days: $('select[name="frequency"]').val() === 'weekly' 
+                        ? $('input[name="days"]:checked').map(function() {
+                            return this.value;
+                        }).get()
+                        : null
+                };
+
+                $.ajax({
+                    url: '/api/reminders',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(formData),
+                    success: function() {
+                        $('#addReminderModal').modal('hide');
+                        loadReminders();
+                        $('#reminderForm')[0].reset();
+                    }
+                });
+            });
+
+            // Hatırlatıcı silme
+            $(document).on('click', '.delete-reminder', function() {
+                const id = $(this).data('id');
+                if (confirm('Bu hatırlatıcıyı silmek istediğinize emin misiniz?')) {
+                    $.ajax({
+                        url: `/api/reminders/${id}`,
+                        method: 'DELETE',
+                        success: loadReminders
+                    });
+                }
+            });
+        });
+    </script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html> 
