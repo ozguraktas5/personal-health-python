@@ -3,10 +3,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+from flask_wtf import FlaskForm
+from wtforms import StringField, PasswordField, FloatField, SubmitField
+from wtforms.validators import DataRequired, Length, EqualTo
 import json
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change in production
+app.config['SECRET_KEY'] = 'your-super-secret-key-12345'  # Change this in production
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///health_tracker.db'
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
@@ -23,7 +26,6 @@ class User(UserMixin, db.Model):
     water_logs = db.relationship('WaterLog', backref='user', lazy=True)
     goals = db.relationship('Goals', backref='user', lazy=True)
     nutrition_logs = db.relationship('NutritionLog', backref='user', lazy=True)
-    reminders = db.relationship('Reminder', backref='user', lazy=True)
 
 class Weight(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -68,18 +70,12 @@ class NutritionLog(db.Model):
     portion_size = db.Column(db.Float)  # in grams or ml
     notes = db.Column(db.String(200))
 
-class Reminder(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(200))
-    reminder_type = db.Column(db.String(50), nullable=False)  # water, exercise, meal, weight, medication
-    frequency = db.Column(db.String(50), nullable=False)  # daily, weekly, custom
-    time = db.Column(db.Time, nullable=False)  # For daily/custom reminders
-    days = db.Column(db.String(100))  # JSON string of days for weekly reminders
-    active = db.Column(db.Boolean, default=True)
-    last_triggered = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+class RegistrationForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=80)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
+    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
+    height = FloatField('Height (cm)', validators=[DataRequired()])
+    submit = SubmitField('Register')
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -124,21 +120,22 @@ def login():
 # Register
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        if User.query.filter_by(username=username).first():
+    form = RegistrationForm()
+    if form.validate_on_submit():
+        if User.query.filter_by(username=form.username.data).first():
             flash('Username already exists')
             return redirect(url_for('register'))
         
         user = User(
-            username=username,
-            password_hash=generate_password_hash(request.form.get('password')),
-            height=float(request.form.get('height', 0))
+            username=form.username.data,
+            password_hash=generate_password_hash(form.password.data),
+            height=form.height.data
         )
         db.session.add(user)
         db.session.commit()
+        flash('Registration successful! Please login.')
         return redirect(url_for('login'))
-    return render_template('register.html')
+    return render_template('register.html', form=form)
 
 # Logout
 @app.route('/logout')
@@ -265,18 +262,133 @@ def get_user_statistics(user_id):
         }
     }
 
-@app.route('/statistics')
+def calculate_trend(current_data, previous_data, value_field):
+    """Calculate trend by comparing current and previous periods"""
+    if not current_data or not previous_data:
+        return 'stable'
+    
+    current_total = sum(getattr(item, value_field) for item in current_data)
+    previous_total = sum(getattr(item, value_field) for item in previous_data)
+    
+    if current_total == previous_total:
+        return 'stable'
+    return 'up' if current_total > previous_total else 'down'
+
+@app.route('/api/statistics')
 @login_required
-def statistics():
-    stats_data = get_user_statistics(current_user.id)
-    return render_template('statistics.html', 
-                         weight_dates=stats_data['weight_dates'],
-                         weight_data=stats_data['weight_data'],
-                         exercise_dates=stats_data['exercise_dates'],
-                         exercise_durations=stats_data['exercise_durations'],
-                         water_dates=stats_data['water_dates'],
-                         water_amounts=stats_data['water_amounts'],
-                         stats=stats_data['stats'])
+def get_statistics():
+    # Get date range from query parameters, default to last 30 days
+    end_date = request.args.get('end_date', datetime.now().strftime('%Y-%m-%d'))
+    start_date = request.args.get('start_date', 
+        (datetime.strptime(end_date, '%Y-%m-%d') - timedelta(days=30)).strftime('%Y-%m-%d'))
+    
+    # Convert to datetime objects for comparison
+    start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+    end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include end date
+    
+    # Get records within date range
+    weights = Weight.query.filter(
+        Weight.user_id == current_user.id,
+        Weight.date >= start_dt, 
+        Weight.date < end_dt
+    ).order_by(Weight.date).all()
+    
+    exercises = Exercise.query.filter(
+        Exercise.user_id == current_user.id,
+        Exercise.date >= start_dt, 
+        Exercise.date < end_dt
+    ).order_by(Exercise.date).all()
+    
+    water_logs = WaterLog.query.filter(
+        WaterLog.user_id == current_user.id,
+        WaterLog.date >= start_dt, 
+        WaterLog.date < end_dt
+    ).order_by(WaterLog.date).all()
+    
+    nutrition_logs = NutritionLog.query.filter(
+        NutritionLog.user_id == current_user.id,
+        NutritionLog.date >= start_dt, 
+        NutritionLog.date < end_dt
+    ).order_by(NutritionLog.date).all()
+    
+    # Calculate daily averages
+    total_days = (end_dt - start_dt).days
+    avg_calories = sum(log.calories for log in nutrition_logs) / total_days if nutrition_logs else 0
+    avg_water = sum(log.amount for log in water_logs) / total_days if water_logs else 0
+    avg_exercise = sum(ex.duration for ex in exercises) / total_days if exercises else 0
+    
+    # Calculate weight change
+    first_weight = weights[0].weight if weights else None
+    last_weight = weights[-1].weight if weights else None
+    weight_change = last_weight - first_weight if first_weight and last_weight else 0
+    
+    # Calculate trends (compare with previous period)
+    prev_start = start_dt - timedelta(days=total_days)
+    prev_exercises = Exercise.query.filter(
+        Exercise.user_id == current_user.id,
+        Exercise.date >= prev_start, 
+        Exercise.date < start_dt
+    ).all()
+    
+    prev_water = WaterLog.query.filter(
+        WaterLog.user_id == current_user.id,
+        WaterLog.date >= prev_start, 
+        WaterLog.date < start_dt
+    ).all()
+    
+    prev_nutrition = NutritionLog.query.filter(
+        NutritionLog.user_id == current_user.id,
+        NutritionLog.date >= prev_start, 
+        WaterLog.date < start_dt
+    ).all()
+    
+    # Exercise types data
+    exercise_types = {
+        'walking': 0,
+        'running': 0,
+        'cycling': 0,
+        'swimming': 0,
+        'gym': 0,
+        'other': 0
+    }
+    
+    # Sum durations by exercise type
+    for exercise in exercises:
+        exercise_type = exercise.type.lower()
+        if exercise_type in exercise_types:
+            exercise_types[exercise_type] += exercise.duration
+        else:
+            exercise_types['other'] += exercise.duration
+    
+    return jsonify({
+        'averages': {
+            'calories': round(avg_calories, 1),
+            'water': round(avg_water, 1),
+            'exercise': round(avg_exercise, 1)
+        },
+        'weight': {
+            'start': first_weight,
+            'end': last_weight,
+            'change': round(weight_change, 1) if weight_change else 0
+        },
+        'trends': {
+            'calories': calculate_trend(nutrition_logs, prev_nutrition, 'calories'),
+            'water': calculate_trend(water_logs, prev_water, 'amount'),
+            'exercise': calculate_trend(exercises, prev_exercises, 'duration'),
+            'weight': 'down' if weight_change < 0 else 'up' if weight_change > 0 else 'stable'
+        },
+        'charts': {
+            'weight': [{'date': w.date.strftime('%Y-%m-%d'), 'value': w.weight} for w in weights],
+            'water': [{'date': w.date.strftime('%Y-%m-%d'), 'value': w.amount} for w in water_logs],
+            'exercise': [{'date': e.date.strftime('%Y-%m-%d'), 'value': e.duration} for e in exercises],
+            'nutrition': {
+                'protein': sum(n.protein or 0 for n in nutrition_logs),
+                'carbs': sum(n.carbs or 0 for n in nutrition_logs),
+                'fat': sum(n.fat or 0 for n in nutrition_logs)
+            },
+            'exerciseTypes': exercise_types
+        }
+    })
 
 @app.route('/api/goals', methods=['POST'])
 @login_required
@@ -312,23 +424,19 @@ def create_goal():
         'active': new_goal.active
     }), 201
 
-@app.route('/api/goals/active', methods=['GET'])
+@app.route('/api/goals/active')
 @login_required
 def get_active_goals():
-    active_goal = Goals.query.filter_by(user_id=current_user.id, active=True).first()
-    
-    if not active_goal:
-        return jsonify({'message': 'No active goals found'}), 404
-        
-    return jsonify({
-        'id': active_goal.id,
-        'target_weight': active_goal.target_weight,
-        'target_exercise_minutes': active_goal.target_exercise_minutes,
-        'target_water_ml': active_goal.target_water_ml,
-        'start_date': active_goal.start_date.strftime('%Y-%m-%d'),
-        'target_date': active_goal.target_date.strftime('%Y-%m-%d'),
-        'active': active_goal.active
-    })
+    goals = Goals.query.filter_by(user_id=current_user.id, active=True).all()
+    return jsonify([{
+        'id': goal.id,
+        'target_weight': goal.target_weight,
+        'target_exercise_minutes': goal.target_exercise_minutes,
+        'target_water_ml': goal.target_water_ml,
+        'start_date': goal.start_date.strftime('%Y-%m-%d'),
+        'target_date': goal.target_date.strftime('%Y-%m-%d'),
+        'active': goal.active
+    } for goal in goals])
 
 @app.route('/api/goals/<int:goal_id>', methods=['PUT'])
 @login_required
@@ -758,343 +866,10 @@ def get_health_report():
     except ValueError:
         return jsonify({'message': 'Invalid date format. Use YYYY-MM-DD'}), 400
 
-@app.route('/api/reminders', methods=['POST'])
+@app.route('/statistics')
 @login_required
-def create_reminder():
-    data = request.get_json()
-    
-    # Parse time from string
-    reminder_time = datetime.strptime(data['time'], '%H:%M').time()
-    
-    # Parse days for weekly reminders
-    days_json = None
-    if data.get('frequency') == 'weekly' and data.get('days'):
-        days_json = json.dumps(data['days'])
-    
-    reminder = Reminder(
-        user_id=current_user.id,
-        title=data['title'],
-        description=data.get('description'),
-        reminder_type=data['reminder_type'],
-        frequency=data['frequency'],
-        time=reminder_time,
-        days=days_json,
-        active=True
-    )
-    
-    db.session.add(reminder)
-    db.session.commit()
-    
-    return jsonify({
-        'id': reminder.id,
-        'title': reminder.title,
-        'description': reminder.description,
-        'reminder_type': reminder.reminder_type,
-        'frequency': reminder.frequency,
-        'time': reminder.time.strftime('%H:%M'),
-        'days': json.loads(reminder.days) if reminder.days else None,
-        'active': reminder.active,
-        'created_at': reminder.created_at.strftime('%Y-%m-%d %H:%M:%S')
-    }), 201
-
-@app.route('/api/reminders', methods=['GET'])
-@login_required
-def get_reminders():
-    reminders = Reminder.query.filter_by(user_id=current_user.id).all()
-    
-    return jsonify([{
-        'id': r.id,
-        'title': r.title,
-        'description': r.description,
-        'reminder_type': r.reminder_type,
-        'frequency': r.frequency,
-        'time': r.time.strftime('%H:%M'),
-        'days': json.loads(r.days) if r.days else None,
-        'active': r.active,
-        'last_triggered': r.last_triggered.strftime('%Y-%m-%d %H:%M:%S') if r.last_triggered else None,
-        'created_at': r.created_at.strftime('%Y-%m-%d %H:%M:%S')
-    } for r in reminders])
-
-@app.route('/api/reminders/<int:reminder_id>', methods=['PUT'])
-@login_required
-def update_reminder(reminder_id):
-    reminder = Reminder.query.get_or_404(reminder_id)
-    
-    if reminder.user_id != current_user.id:
-        return jsonify({'message': 'Unauthorized'}), 403
-    
-    data = request.get_json()
-    
-    if 'title' in data:
-        reminder.title = data['title']
-    if 'description' in data:
-        reminder.description = data['description']
-    if 'reminder_type' in data:
-        reminder.reminder_type = data['reminder_type']
-    if 'frequency' in data:
-        reminder.frequency = data['frequency']
-    if 'time' in data:
-        reminder.time = datetime.strptime(data['time'], '%H:%M').time()
-    if 'days' in data:
-        reminder.days = json.dumps(data['days']) if data['days'] else None
-    if 'active' in data:
-        reminder.active = data['active']
-    
-    db.session.commit()
-    
-    return jsonify({
-        'id': reminder.id,
-        'title': reminder.title,
-        'description': reminder.description,
-        'reminder_type': reminder.reminder_type,
-        'frequency': reminder.frequency,
-        'time': reminder.time.strftime('%H:%M'),
-        'days': json.loads(reminder.days) if reminder.days else None,
-        'active': reminder.active,
-        'last_triggered': reminder.last_triggered.strftime('%Y-%m-%d %H:%M:%S') if reminder.last_triggered else None,
-        'created_at': reminder.created_at.strftime('%Y-%m-%d %H:%M:%S')
-    })
-
-@app.route('/api/reminders/<int:reminder_id>', methods=['DELETE'])
-@login_required
-def delete_reminder(reminder_id):
-    reminder = Reminder.query.get_or_404(reminder_id)
-    
-    if reminder.user_id != current_user.id:
-        return jsonify({'message': 'Unauthorized'}), 403
-    
-    db.session.delete(reminder)
-    db.session.commit()
-    
-    return '', 204
-
-@app.route('/api/reminders/check', methods=['GET'])
-@login_required
-def check_due_reminders():
-    """Check for due reminders and return them"""
-    now = datetime.now()
-    current_time = now.time()
-    current_weekday = now.strftime('%A').lower()
-    
-    # Get all active reminders for the user
-    reminders = Reminder.query.filter_by(
-        user_id=current_user.id,
-        active=True
-    ).all()
-    
-    due_reminders = []
-    for reminder in reminders:
-        # Check if reminder should trigger based on frequency
-        should_trigger = False
-        
-        if reminder.frequency == 'daily':
-            # For daily reminders, check if it's time
-            should_trigger = (
-                current_time.hour == reminder.time.hour and
-                current_time.minute == reminder.time.minute and
-                (not reminder.last_triggered or
-                 reminder.last_triggered.date() < now.date())
-            )
-        
-        elif reminder.frequency == 'weekly' and reminder.days:
-            # For weekly reminders, check if it's the right day and time
-            reminder_days = json.loads(reminder.days)
-            if (current_weekday in reminder_days and
-                current_time.hour == reminder.time.hour and
-                current_time.minute == reminder.time.minute and
-                (not reminder.last_triggered or
-                 reminder.last_triggered.date() < now.date())):
-                should_trigger = True
-        
-        if should_trigger:
-            reminder.last_triggered = now
-            db.session.commit()
-            
-            due_reminders.append({
-                'id': reminder.id,
-                'title': reminder.title,
-                'description': reminder.description,
-                'reminder_type': reminder.reminder_type,
-                'time': reminder.time.strftime('%H:%M')
-            })
-    
-    return jsonify(due_reminders)
-
-@app.route('/api/statistics')
-@login_required
-def get_statistics():
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-    
-    # Convert string dates to datetime objects
-    start_date = datetime.strptime(start_date, '%Y-%m-%d')
-    end_date = datetime.strptime(end_date, '%Y-%m-%d')
-    
-    # Adjust end_date to include the entire day
-    end_date = end_date.replace(hour=23, minute=59, second=59)
-    
-    print(f"Fetching statistics from {start_date} to {end_date}")  # Debug print
-    
-    # Get all records within date range
-    exercises = Exercise.query.filter(
-        Exercise.user_id == current_user.id,
-        Exercise.date >= start_date,
-        Exercise.date <= end_date
-    ).order_by(Exercise.date).all()
-    
-    print(f"Found {len(exercises)} exercise records")  # Debug print
-    for ex in exercises:
-        print(f"Exercise: {ex.type} - {ex.duration} minutes on {ex.date}")  # Debug print
-    
-    # Exercise type distribution
-    exercise_types = {
-        'walking': 0,
-        'running': 0,
-        'cycling': 0,
-        'swimming': 0,
-        'gym': 0,
-        'other': 0
-    }
-    
-    # Calculate total duration for each exercise type
-    for exercise in exercises:
-        exercise_type = exercise.type.lower().strip()  # Convert to lowercase and remove whitespace
-        if exercise_type in exercise_types:
-            exercise_types[exercise_type] += exercise.duration
-        else:
-            exercise_types['other'] += exercise.duration
-    
-    print("Exercise type totals:", exercise_types)  # Debug print
-    
-    # Calculate daily exercise totals
-    daily_exercise = {}
-    for exercise in exercises:
-        date_str = exercise.date.strftime('%Y-%m-%d')
-        if date_str not in daily_exercise:
-            daily_exercise[date_str] = 0
-        daily_exercise[date_str] += exercise.duration
-    
-    # Get date range for the chart
-    date_range = []
-    current_date = start_date
-    while current_date <= end_date:
-        date_range.append(current_date.strftime('%Y-%m-%d'))
-        current_date += timedelta(days=1)
-    
-    # Fill in missing dates with 0
-    exercise_values = [daily_exercise.get(date, 0) for date in date_range]
-    
-    # Calculate average exercise duration
-    total_days = (end_date - start_date).days + 1
-    avg_exercise = sum(daily_exercise.values()) / total_days if daily_exercise else 0
-    
-    # Calculate exercise trend
-    exercise_trend = 0
-    if daily_exercise:
-        dates = sorted(daily_exercise.keys())
-        if len(dates) > 1:
-            first_val = daily_exercise[dates[0]]
-            last_val = daily_exercise[dates[-1]]
-            if first_val > 0:
-                exercise_trend = ((last_val - first_val) / first_val) * 100
-    
-    # Get other data (weights, water, nutrition)
-    weights = Weight.query.filter(
-        Weight.user_id == current_user.id,
-        Weight.date >= start_date,
-        Weight.date <= end_date
-    ).order_by(Weight.date).all()
-    
-    water_logs = WaterLog.query.filter(
-        WaterLog.user_id == current_user.id,
-        WaterLog.date >= start_date,
-        WaterLog.date <= end_date
-    ).order_by(WaterLog.date).all()
-    
-    nutrition_logs = NutritionLog.query.filter(
-        NutritionLog.user_id == current_user.id,
-        NutritionLog.date >= start_date,
-        NutritionLog.date <= end_date
-    ).order_by(NutritionLog.date).all()
-    
-    # Calculate daily averages for other metrics
-    daily_calories = {}
-    daily_water = {}
-    
-    for log in nutrition_logs:
-        date_str = log.date.strftime('%Y-%m-%d')
-        if date_str not in daily_calories:
-            daily_calories[date_str] = 0
-        daily_calories[date_str] += log.calories
-    
-    for log in water_logs:
-        date_str = log.date.strftime('%Y-%m-%d')
-        if date_str not in daily_water:
-            daily_water[date_str] = 0
-        daily_water[date_str] += log.amount
-    
-    avg_calories = sum(daily_calories.values()) / total_days if daily_calories else 0
-    avg_water = sum(daily_water.values()) / total_days if daily_water else 0
-    
-    # Calculate weight change
-    first_weight = weights[0].weight if weights else None
-    last_weight = weights[-1].weight if weights else None
-    
-    # Calculate trends
-    def calculate_trend(values):
-        if not values:
-            return 0
-        dates = sorted(values.keys())
-        if len(dates) < 2:
-            return 0
-        first_val = values[dates[0]]
-        last_val = values[dates[-1]]
-        if first_val == 0:
-            return 0
-        return ((last_val - first_val) / first_val) * 100
-    
-    # Calculate nutrition distribution
-    total_protein = sum(log.protein for log in nutrition_logs if log.protein is not None)
-    total_carbs = sum(log.carbs for log in nutrition_logs if log.carbs is not None)
-    total_fat = sum(log.fat for log in nutrition_logs if log.fat is not None)
-    
-    return jsonify({
-        'averages': {
-            'calories': avg_calories,
-            'water': avg_water,
-            'exercise': avg_exercise
-        },
-        'weight': {
-            'start': first_weight,
-            'end': last_weight
-        },
-        'trends': {
-            'calories': calculate_trend(daily_calories),
-            'water': calculate_trend(daily_water),
-            'exercise': exercise_trend,
-            'weight': ((last_weight - first_weight) / first_weight * 100) if first_weight and last_weight else 0
-        },
-        'charts': {
-            'weight': {
-                'labels': [w.date.strftime('%Y-%m-%d') for w in weights],
-                'values': [w.weight for w in weights]
-            },
-            'water': {
-                'labels': date_range,
-                'values': [daily_water.get(date, 0) for date in date_range]
-            },
-            'exercise': {
-                'labels': date_range,
-                'values': exercise_values
-            },
-            'nutrition': {
-                'protein': total_protein,
-                'carbs': total_carbs,
-                'fat': total_fat
-            },
-            'exerciseTypes': exercise_types
-        }
-    })
+def statistics():
+    return render_template('statistics.html')
 
 if __name__ == '__main__':
     with app.app_context():

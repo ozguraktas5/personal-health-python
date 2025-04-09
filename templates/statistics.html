@@ -288,7 +288,6 @@ $(document).ready(function() {
                 updateWeightChart(weightChart, data.charts.weight);
                 updateWaterChart(waterChart, data.charts.water);
                 updateExerciseChart(exerciseChart, data.charts.exercise);
-                updateNutritionChart(nutritionChart, data.charts.nutrition);
                 updateExerciseTypesChart(exerciseTypesChart, data.charts.exerciseTypes);
             },
             error: function(xhr, status, error) {
@@ -349,23 +348,27 @@ $(document).ready(function() {
     }
 
     function updateExerciseTypesChart(chart, data) {
-        console.log('Updating exercise types chart with data:', data);  // Debug log
-        const totalExercise = Object.values(data).reduce((sum, val) => sum + (val || 0), 0);
-        if (totalExercise > 0) {
-            const types = ['walking', 'running', 'cycling', 'swimming', 'gym', 'other'];
-            const values = types.map(type => data[type] || 0);
-            const labels = types.map(type => 
-                `${type.charAt(0).toUpperCase() + type.slice(1)} (${Math.round(data[type] || 0)} min)`
-            );
-            
-            chart.data.datasets[0].data = values;
-            chart.data.labels = labels;
-            chart.data.datasets[0].backgroundColor = ['#0d6efd', '#198754', '#ffc107', '#0dcaf0', '#dc3545', '#6c757d'];
-        } else {
-            chart.data.datasets[0].data = [1];
-            chart.data.labels = ['No exercise data'];
-            chart.data.datasets[0].backgroundColor = ['#6c757d'];
-        }
+        console.log("Updating exercise types chart with data:", data);  // Debug log
+        
+        const exerciseTypes = ['walking', 'running', 'cycling', 'swimming', 'gym', 'other'];
+        const labels = exerciseTypes.map(type => 
+            type.charAt(0).toUpperCase() + type.slice(1) + 
+            (data[type] > 0 ? ` (${data[type]} min)` : '')
+        );
+        
+        const values = exerciseTypes.map(type => data[type] || 0);
+        const colors = [
+            'rgba(75, 192, 192, 0.8)',  // Walking - Teal
+            'rgba(255, 99, 132, 0.8)',  // Running - Pink
+            'rgba(54, 162, 235, 0.8)',  // Cycling - Blue
+            'rgba(153, 102, 255, 0.8)', // Swimming - Purple
+            'rgba(255, 159, 64, 0.8)',  // Gym - Orange
+            'rgba(201, 203, 207, 0.8)'  // Other - Gray
+        ];
+        
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = values;
+        chart.data.datasets[0].backgroundColor = colors;
         chart.update();
     }
 
