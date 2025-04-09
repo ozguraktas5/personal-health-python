@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Sağlık Takip{% endblock %}</title>
+    <title>{% block title %}Health Tracker{% endblock %}</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -49,6 +49,45 @@
             padding: 2px 6px;
             font-size: 12px;
         }
+        /* Custom Flash Message Styles */
+        .alert[data-category="weight"] {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffd93d 100%);
+            color: white;
+            border: none;
+        }
+
+        .alert[data-category="exercise"] {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+        }
+
+        .alert[data-category="water"] {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            border: none;
+        }
+
+        .alert[data-category="nutrition"] {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+            border: none;
+        }
+
+        .alert[data-category="goal"] {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .alert .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+        }
+
+        .alert .btn-close:hover {
+            opacity: 1;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -59,7 +98,9 @@
             <nav class="col-md-3 col-lg-2 d-md-block sidebar collapse">
                 <div class="position-sticky">
                     <div class="text-center mb-4">
-                        <h4>Sağlık Takip</h4>
+                        <a href="{{ url_for('dashboard') }}" class="text-decoration-none">
+                            <h4 class="text-dark">Health Tracker</h4>
+                        </a>
                     </div>
                     <ul class="nav flex-column">
                         <li class="nav-item">
@@ -69,18 +110,18 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link {% if request.endpoint == 'statistics' %}active{% endif %}" href="{{ url_for('statistics') }}">
-                                <i class="fas fa-chart-line me-2"></i>İstatistikler
+                                <i class="fas fa-chart-line me-2"></i>Statistics
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link reminder-badge" href="#" data-bs-toggle="modal" data-bs-target="#remindersModal">
-                                <i class="fas fa-bell me-2"></i>Hatırlatıcılar
+                                <i class="fas fa-bell me-2"></i>Reminders
                                 <span class="reminder-count" id="reminderCount">0</span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('logout') }}">
-                                <i class="fas fa-sign-out-alt me-2"></i>Çıkış
+                                <i class="fas fa-sign-out-alt me-2"></i>Logout
                             </a>
                         </li>
                     </ul>
@@ -92,7 +133,7 @@
                 {% with messages = get_flashed_messages(with_categories=true) %}
                     {% if messages %}
                         {% for category, message in messages %}
-                            <div class="alert alert-{{ category }} alert-dismissible fade show mt-3" role="alert">
+                            <div class="alert alert-dismissible fade show mt-3" role="alert" data-category="{{ category }}">
                                 {{ message }}
                                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
@@ -110,13 +151,13 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Hatırlatıcılar</h5>
+                    <h5 class="modal-title">Reminders</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <div id="remindersList"></div>
                     <button class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addReminderModal">
-                        <i class="fas fa-plus me-2"></i>Yeni Hatırlatıcı
+                        <i class="fas fa-plus me-2"></i>New Reminder
                     </button>
                 </div>
             </div>
@@ -128,91 +169,130 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Yeni Hatırlatıcı</h5>
+                    <h5 class="modal-title">New Reminder</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="reminderForm">
                         <div class="mb-3">
-                            <label class="form-label">Başlık</label>
+                            <label class="form-label">Title</label>
                             <input type="text" class="form-control" name="title" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Açıklama</label>
+                            <label class="form-label">Description</label>
                             <textarea class="form-control" name="description"></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Tür</label>
+                            <label class="form-label">Type</label>
                             <select class="form-select" name="reminder_type" required>
-                                <option value="water">Su İçme</option>
-                                <option value="exercise">Egzersiz</option>
-                                <option value="meal">Öğün</option>
-                                <option value="weight">Tartılma</option>
-                                <option value="medication">İlaç</option>
+                                <option value="water">Water Intake</option>
+                                <option value="exercise">Exercise</option>
+                                <option value="meal">Meal</option>
+                                <option value="weight">Weight</option>
+                                <option value="medication">Medication</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Sıklık</label>
+                            <label class="form-label">Frequency</label>
                             <select class="form-select" name="frequency" id="frequency" required>
-                                <option value="daily">Günlük</option>
-                                <option value="weekly">Haftalık</option>
+                                <option value="daily">Daily</option>
+                                <option value="weekly">Weekly</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Saat</label>
+                            <label class="form-label">Time</label>
                             <input type="time" class="form-control" name="time" required>
                         </div>
                         <div class="mb-3" id="daysSelection" style="display: none;">
-                            <label class="form-label">Günler</label>
+                            <label class="form-label">Days</label>
                             <div class="btn-group d-flex flex-wrap" role="group">
                                 <input type="checkbox" class="btn-check" name="days" value="monday" id="monday">
-                                <label class="btn btn-outline-primary" for="monday">Pzt</label>
+                                <label class="btn btn-outline-primary" for="monday">Mon</label>
                                 <input type="checkbox" class="btn-check" name="days" value="tuesday" id="tuesday">
-                                <label class="btn btn-outline-primary" for="tuesday">Sal</label>
+                                <label class="btn btn-outline-primary" for="tuesday">Tue</label>
                                 <input type="checkbox" class="btn-check" name="days" value="wednesday" id="wednesday">
-                                <label class="btn btn-outline-primary" for="wednesday">Çar</label>
+                                <label class="btn btn-outline-primary" for="wednesday">Wed</label>
                                 <input type="checkbox" class="btn-check" name="days" value="thursday" id="thursday">
-                                <label class="btn btn-outline-primary" for="thursday">Per</label>
+                                <label class="btn btn-outline-primary" for="thursday">Thu</label>
                                 <input type="checkbox" class="btn-check" name="days" value="friday" id="friday">
-                                <label class="btn btn-outline-primary" for="friday">Cum</label>
+                                <label class="btn btn-outline-primary" for="friday">Fri</label>
                                 <input type="checkbox" class="btn-check" name="days" value="saturday" id="saturday">
-                                <label class="btn btn-outline-primary" for="saturday">Cmt</label>
+                                <label class="btn btn-outline-primary" for="saturday">Sat</label>
                                 <input type="checkbox" class="btn-check" name="days" value="sunday" id="sunday">
-                                <label class="btn btn-outline-primary" for="sunday">Paz</label>
+                                <label class="btn btn-outline-primary" for="sunday">Sun</label>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-primary">Kaydet</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    </div>
+
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    {% block extra_js %}{% endblock %}
+    
     <!-- Custom JS -->
     <script>
-        // Hatırlatıcı kontrolü
+        // Check reminders
         function checkReminders() {
             $.get('/api/reminders/check', function(reminders) {
                 if (reminders.length > 0) {
                     $('#reminderCount').text(reminders.length);
-                    // Bildirim göster
+                    // Show notification only if permission is granted
                     if (Notification.permission === "granted") {
                         reminders.forEach(function(reminder) {
-                            new Notification(reminder.title, {
-                                body: reminder.description || 'Hatırlatıcı zamanı geldi!',
-                                icon: '/static/icon.png'
-                            });
+                            try {
+                                new Notification(reminder.title, {
+                                    body: reminder.description || 'Time for your reminder!',
+                                    icon: '/static/icon.png',
+                                    tag: reminder.id // Prevent duplicate notifications
+                                });
+                            } catch (error) {
+                                console.log('Notification error:', error);
+                            }
                         });
                     }
+                } else {
+                    $('#reminderCount').text('0');
                 }
             });
         }
 
-        // Hatırlatıcıları listele
+        // Request notification permission with better UX
+        async function requestNotificationPermission() {
+            try {
+                // Check if the browser supports notifications
+                if (!('Notification' in window)) {
+                    console.log('This browser does not support notifications');
+                    return;
+                }
+
+                // Only request if the permission is not already set
+                if (Notification.permission === "default") {
+                    const permission = await Notification.requestPermission();
+                    console.log('Notification permission:', permission);
+                    
+                    // If granted, show a test notification
+                    if (permission === "granted") {
+                        new Notification("Health Tracker", {
+                            body: "You will now receive health reminders!",
+                            icon: '/static/icon.png'
+                        });
+                    }
+                }
+            } catch (error) {
+                console.log('Error requesting notification permission:', error);
+            }
+        }
+
+        // List reminders
         function loadReminders() {
             $.get('/api/reminders', function(reminders) {
                 const remindersList = $('#remindersList');
@@ -227,7 +307,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted">
                                         ${reminder.time} - 
-                                        ${reminder.frequency === 'daily' ? 'Günlük' : 'Haftalık'}
+                                        ${reminder.frequency === 'daily' ? 'Daily' : 'Weekly'}
                                     </small>
                                     <div class="btn-group">
                                         <button class="btn btn-sm btn-outline-primary edit-reminder" 
@@ -248,20 +328,40 @@
             });
         }
 
-        // Sayfa yüklendiğinde
+        // When page loads
         $(document).ready(function() {
-            // Bildirim izni iste
-            if (Notification.permission !== "granted") {
-                Notification.requestPermission();
+            let notificationPromptShown = false;
+
+            // Handle notification permission
+            if ('Notification' in window) {
+                if (Notification.permission === "default" && !notificationPromptShown) {
+                    notificationPromptShown = true;
+                    // Show custom prompt with timeout to prevent quick page refreshes
+                    setTimeout(() => {
+                        const showNotificationPrompt = confirm(
+                            "Would you like to receive notifications for your health reminders? " +
+                            "This will help you stay on track with your health goals."
+                        );
+                        
+                        if (showNotificationPrompt) {
+                            requestNotificationPermission();
+                        }
+                    }, 1000);
+                }
             }
 
-            // Hatırlatıcıları yükle
+            // Load reminders
             loadReminders();
 
-            // Her dakika hatırlatıcıları kontrol et
-            setInterval(checkReminders, 60000);
+            // Check reminders every minute
+            const reminderInterval = setInterval(checkReminders, 60000);
 
-            // Sıklık seçimi değiştiğinde
+            // Clear interval when page is unloaded
+            $(window).on('unload', function() {
+                clearInterval(reminderInterval);
+            });
+
+            // When frequency selection changes
             $('#frequency').change(function() {
                 if ($(this).val() === 'weekly') {
                     $('#daysSelection').show();
@@ -270,7 +370,7 @@
                 }
             });
 
-            // Hatırlatıcı formu gönderildiğinde
+            // When reminder form is submitted
             $('#reminderForm').submit(function(e) {
                 e.preventDefault();
                 const formData = {
@@ -299,10 +399,10 @@
                 });
             });
 
-            // Hatırlatıcı silme
+            // Delete reminder
             $(document).on('click', '.delete-reminder', function() {
                 const id = $(this).data('id');
-                if (confirm('Bu hatırlatıcıyı silmek istediğinize emin misiniz?')) {
+                if (confirm('Are you sure you want to delete this reminder?')) {
                     $.ajax({
                         url: `/api/reminders/${id}`,
                         method: 'DELETE',
@@ -312,6 +412,5 @@
             });
         });
     </script>
-    {% block extra_js %}{% endblock %}
 </body>
 </html> 

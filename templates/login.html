@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Giriş - Sağlık Takip{% endblock %}
+{% block title %}Login - Health Tracker{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -8,22 +8,22 @@
         <div class="col-md-6 col-lg-5">
             <div class="card mt-5">
                 <div class="card-body">
-                    <h3 class="card-title text-center mb-4">Giriş Yap</h3>
+                    <h3 class="card-title text-center mb-4">Login</h3>
                     <form method="POST" action="{{ url_for('login') }}">
                         <div class="mb-3">
-                            <label for="username" class="form-label">Kullanıcı Adı</label>
+                            <label for="username" class="form-label">Username</label>
                             <input type="text" class="form-control" id="username" name="username" required>
                         </div>
                         <div class="mb-3">
-                            <label for="password" class="form-label">Şifre</label>
+                            <label for="password" class="form-label">Password</label>
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
                         <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary">Giriş Yap</button>
+                            <button type="submit" class="btn btn-primary">Login</button>
                         </div>
                     </form>
                     <div class="text-center mt-3">
-                        <p class="mb-0">Hesabınız yok mu? <a href="{{ url_for('register') }}">Kayıt Ol</a></p>
+                        <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}">Register</a></p>
                     </div>
                 </div>
             </div>

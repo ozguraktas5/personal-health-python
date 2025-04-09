@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Profil - Sağlık Takip{% endblock %}
+{% block title %}Profile - Health Tracker{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -66,20 +66,20 @@
 {% endblock %}
 
 {% block content %}
-<!-- Profil Başlığı -->
+<!-- Profile Header -->
 <div class="profile-header">
     <div class="container">
         <div class="row align-items-center">
             <div class="col-auto">
                 <img src="{{ url_for('static', filename='images/default-avatar.png') }}" 
-                     alt="Profil Fotoğrafı" 
+                     alt="Profile Photo" 
                      class="profile-avatar">
             </div>
             <div class="col">
                 <h1 class="mb-2">{{ current_user.username }}</h1>
                 <p class="mb-0">
                     <i class="fas fa-calendar-alt me-2"></i>
-                    Kayıt Tarihi: {{ current_user.created_at.strftime('%d.%m.%Y') }}
+                    Registration Date: {{ current_user.created_at.strftime('%d.%m.%Y') }}
                 </p>
             </div>
         </div>
@@ -88,230 +88,230 @@
 
 <div class="container">
     <div class="row">
-        <!-- Sol Menü -->
+        <!-- Left Menu -->
         <div class="col-md-3 mb-4">
             <div class="card">
                 <div class="card-body">
                     <nav class="nav nav-pills flex-column">
                         <a class="nav-link active" href="#profile" data-bs-toggle="tab">
-                            <i class="fas fa-user me-2"></i>Profil Bilgileri
+                            <i class="fas fa-user me-2"></i>Profile Information
                         </a>
                         <a class="nav-link" href="#goals" data-bs-toggle="tab">
-                            <i class="fas fa-bullseye me-2"></i>Hedeflerim
+                            <i class="fas fa-bullseye me-2"></i>My Goals
                         </a>
                         <a class="nav-link" href="#reminders" data-bs-toggle="tab">
-                            <i class="fas fa-bell me-2"></i>Hatırlatıcılar
+                            <i class="fas fa-bell me-2"></i>Reminders
                         </a>
                         <a class="nav-link" href="#preferences" data-bs-toggle="tab">
-                            <i class="fas fa-cog me-2"></i>Tercihler
+                            <i class="fas fa-cog me-2"></i>Preferences
                         </a>
                         <a class="nav-link" href="#security" data-bs-toggle="tab">
-                            <i class="fas fa-shield-alt me-2"></i>Güvenlik
+                            <i class="fas fa-shield-alt me-2"></i>Security
                         </a>
                     </nav>
                 </div>
             </div>
         </div>
 
-        <!-- Sağ İçerik -->
+        <!-- Right Content -->
         <div class="col-md-9">
             <div class="tab-content">
-                <!-- Profil Bilgileri -->
+                <!-- Profile Information -->
                 <div class="tab-pane fade show active" id="profile">
                     <div class="card settings-card">
                         <div class="card-body">
-                            <h5 class="card-title mb-4">Profil Bilgileri</h5>
+                            <h5 class="card-title mb-4">Profile Information</h5>
                             <form id="profileForm">
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Kullanıcı Adı</label>
+                                        <label class="form-label">Username</label>
                                         <input type="text" class="form-control" name="username" 
                                                value="{{ current_user.username }}" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">E-posta</label>
+                                        <label class="form-label">Email</label>
                                         <input type="email" class="form-control" name="email" 
                                                value="{{ current_user.email }}" required>
                                     </div>
                                 </div>
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Boy (cm)</label>
+                                        <label class="form-label">Height (cm)</label>
                                         <input type="number" class="form-control" name="height" 
                                                value="{{ current_user.height }}" required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Doğum Tarihi</label>
+                                        <label class="form-label">Birth Date</label>
                                         <input type="date" class="form-control" name="birth_date" 
                                                value="{{ current_user.birth_date }}">
                                     </div>
                                 </div>
                                 <div class="row mb-3">
                                     <div class="col-md-6">
-                                        <label class="form-label">Cinsiyet</label>
+                                        <label class="form-label">Gender</label>
                                         <select class="form-select" name="gender">
-                                            <option value="">Seçiniz</option>
-                                            <option value="M" {% if current_user.gender == 'M' %}selected{% endif %}>Erkek</option>
-                                            <option value="F" {% if current_user.gender == 'F' %}selected{% endif %}>Kadın</option>
-                                            <option value="O" {% if current_user.gender == 'O' %}selected{% endif %}>Diğer</option>
+                                            <option value="">Select</option>
+                                            <option value="M" {% if current_user.gender == 'M' %}selected{% endif %}>Male</option>
+                                            <option value="F" {% if current_user.gender == 'F' %}selected{% endif %}>Female</option>
+                                            <option value="O" {% if current_user.gender == 'O' %}selected{% endif %}>Other</option>
                                         </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label">Aktivite Seviyesi</label>
+                                        <label class="form-label">Activity Level</label>
                                         <select class="form-select" name="activity_level">
                                             <option value="sedentary" {% if current_user.activity_level == 'sedentary' %}selected{% endif %}>
-                                                Hareketsiz (Masa başı iş)
+                                                Sedentary (Desk job)
                                             </option>
                                             <option value="lightly_active" {% if current_user.activity_level == 'lightly_active' %}selected{% endif %}>
-                                                Az Hareketli (Haftada 1-3 gün egzersiz)
+                                                Lightly Active (Exercise 1-3 days/week)
                                             </option>
                                             <option value="moderately_active" {% if current_user.activity_level == 'moderately_active' %}selected{% endif %}>
-                                                Orta Hareketli (Haftada 3-5 gün egzersiz)
+                                                Moderately Active (Exercise 3-5 days/week)
                                             </option>
                                             <option value="very_active" {% if current_user.activity_level == 'very_active' %}selected{% endif %}>
-                                                Çok Hareketli (Haftada 6-7 gün egzersiz)
+                                                Very Active (Exercise 6-7 days/week)
                                             </option>
                                             <option value="extra_active" {% if current_user.activity_level == 'extra_active' %}selected{% endif %}>
-                                                Ekstra Hareketli (Profesyonel sporcu)
+                                                Extra Active (Professional athlete)
                                             </option>
                                         </select>
                                     </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Değişiklikleri Kaydet
+                                    <i class="fas fa-save me-2"></i>Save Changes
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Hedefler -->
+                <!-- Goals -->
                 <div class="tab-pane fade" id="goals">
                     <div class="card settings-card">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="card-title mb-0">Hedeflerim</h5>
+                                <h5 class="card-title mb-0">My Goals</h5>
                                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addGoalModal">
-                                    <i class="fas fa-plus me-2"></i>Yeni Hedef
+                                    <i class="fas fa-plus me-2"></i>New Goal
                                 </button>
                             </div>
                             <div id="goalsList">
-                                <!-- Hedefler JavaScript ile yüklenecek -->
+                                <!-- Goals will be loaded via JavaScript -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Hatırlatıcılar -->
+                <!-- Reminders -->
                 <div class="tab-pane fade" id="reminders">
                     <div class="card settings-card">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="card-title mb-0">Hatırlatıcılar</h5>
+                                <h5 class="card-title mb-0">Reminders</h5>
                                 <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addReminderModal">
-                                    <i class="fas fa-plus me-2"></i>Yeni Hatırlatıcı
+                                    <i class="fas fa-plus me-2"></i>New Reminder
                                 </button>
                             </div>
                             <div id="remindersList">
-                                <!-- Hatırlatıcılar JavaScript ile yüklenecek -->
+                                <!-- Reminders will be loaded via JavaScript -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Tercihler -->
+                <!-- Preferences -->
                 <div class="tab-pane fade" id="preferences">
                     <div class="card settings-card">
                         <div class="card-body">
-                            <h5 class="card-title mb-4">Tercihler</h5>
+                            <h5 class="card-title mb-4">Preferences</h5>
                             <form id="preferencesForm">
                                 <div class="mb-3">
-                                    <label class="form-label">Bildirim Tercihleri</label>
+                                    <label class="form-label">Notification Preferences</label>
                                     <div class="form-check mb-2">
                                         <input type="checkbox" class="form-check-input" id="emailNotifications" 
                                                name="email_notifications" {% if current_user.preferences.email_notifications %}checked{% endif %}>
                                         <label class="form-check-label" for="emailNotifications">
-                                            E-posta Bildirimleri
+                                            Email Notifications
                                         </label>
                                     </div>
                                     <div class="form-check mb-2">
                                         <input type="checkbox" class="form-check-input" id="pushNotifications" 
                                                name="push_notifications" {% if current_user.preferences.push_notifications %}checked{% endif %}>
                                         <label class="form-check-label" for="pushNotifications">
-                                            Tarayıcı Bildirimleri
+                                            Browser Notifications
                                         </label>
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Günlük Hedefler</label>
+                                    <label class="form-label">Daily Goals</label>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Günlük Su Hedefi (ml)</label>
+                                            <label class="form-label">Daily Water Goal (ml)</label>
                                             <input type="number" class="form-control" name="daily_water_goal" 
                                                    value="{{ current_user.preferences.daily_water_goal }}">
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Günlük Adım Hedefi</label>
+                                            <label class="form-label">Daily Steps Goal</label>
                                             <input type="number" class="form-control" name="daily_steps_goal" 
                                                    value="{{ current_user.preferences.daily_steps_goal }}">
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label">Arayüz Tercihleri</label>
+                                    <label class="form-label">Interface Preferences</label>
                                     <select class="form-select" name="theme">
                                         <option value="light" {% if current_user.preferences.theme == 'light' %}selected{% endif %}>
-                                            Açık Tema
+                                            Light Theme
                                         </option>
                                         <option value="dark" {% if current_user.preferences.theme == 'dark' %}selected{% endif %}>
-                                            Koyu Tema
+                                            Dark Theme
                                         </option>
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save me-2"></i>Tercihleri Kaydet
+                                    <i class="fas fa-save me-2"></i>Save Preferences
                                 </button>
                             </form>
                         </div>
                     </div>
                 </div>
 
-                <!-- Güvenlik -->
+                <!-- Security -->
                 <div class="tab-pane fade" id="security">
                     <div class="card settings-card">
                         <div class="card-body">
-                            <h5 class="card-title mb-4">Güvenlik Ayarları</h5>
+                            <h5 class="card-title mb-4">Security Settings</h5>
                             <form id="securityForm">
                                 <div class="mb-4">
-                                    <h6>Şifre Değiştir</h6>
+                                    <h6>Change Password</h6>
                                     <div class="mb-3">
-                                        <label class="form-label">Mevcut Şifre</label>
+                                        <label class="form-label">Current Password</label>
                                         <input type="password" class="form-control" name="current_password">
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Yeni Şifre</label>
+                                        <label class="form-label">New Password</label>
                                         <input type="password" class="form-control" name="new_password">
                                         <div class="form-text">
-                                            Şifreniz en az 8 karakter uzunluğunda olmalıdır.
+                                            Password must be at least 8 characters long.
                                         </div>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label">Yeni Şifre (Tekrar)</label>
+                                        <label class="form-label">Confirm New Password</label>
                                         <input type="password" class="form-control" name="new_password_confirm">
                                     </div>
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-key me-2"></i>Şifreyi Değiştir
+                                        <i class="fas fa-key me-2"></i>Change Password
                                     </button>
                                 </div>
                             </form>
                             <hr>
                             <div class="mt-4">
-                                <h6 class="text-danger">Hesap Silme</h6>
+                                <h6 class="text-danger">Delete Account</h6>
                                 <p class="text-muted">
-                                    Hesabınızı silmek tüm verilerinizi kalıcı olarak silecektir. Bu işlem geri alınamaz.
+                                    Deleting your account will permanently remove all your data. This action cannot be undone.
                                 </p>
                                 <button class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
-                                    <i class="fas fa-trash-alt me-2"></i>Hesabımı Sil
+                                    <i class="fas fa-trash-alt me-2"></i>Delete My Account
                                 </button>
                             </div>
                         </div>
@@ -322,33 +322,33 @@
     </div>
 </div>
 
-<!-- Hesap Silme Modal -->
+<!-- Delete Account Modal -->
 <div class="modal fade" id="deleteAccountModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Hesap Silme Onayı</h5>
+                <h5 class="modal-title">Confirm Account Deletion</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Hesabınızı silmek istediğinizden emin misiniz? Bu işlem geri alınamaz ve tüm verileriniz kalıcı olarak silinecektir.</p>
+                <p>Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.</p>
                 <form id="deleteAccountForm">
                     <div class="mb-3">
-                        <label class="form-label">Onay için şifrenizi girin</label>
+                        <label class="form-label">Enter your password to confirm</label>
                         <input type="password" class="form-control" name="password" required>
                     </div>
                     <div class="form-check mb-3">
                         <input type="checkbox" class="form-check-input" id="confirmDelete" required>
                         <label class="form-check-label" for="confirmDelete">
-                            Hesabımı kalıcı olarak silmek istediğimi onaylıyorum
+                            I confirm that I want to permanently delete my account
                         </label>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="deleteAccountForm" class="btn btn-danger">
-                    <i class="fas fa-trash-alt me-2"></i>Hesabı Sil
+                    <i class="fas fa-trash-alt me-2"></i>Delete Account
                 </button>
             </div>
         </div>
@@ -359,7 +359,7 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Profil formu gönderimi
+    // Profile form submission
     $('#profileForm').submit(function(e) {
         e.preventDefault();
         const formData = {
@@ -377,12 +377,12 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify(formData),
             success: function() {
-                alert('Profil bilgileri güncellendi');
+                alert('Profile information updated');
             }
         });
     });
 
-    // Tercihler formu gönderimi
+    // Preferences form submission
     $('#preferencesForm').submit(function(e) {
         e.preventDefault();
         const formData = {
@@ -399,12 +399,12 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify(formData),
             success: function() {
-                alert('Tercihler güncellendi');
+                alert('Preferences updated');
             }
         });
     });
 
-    // Şifre değiştirme formu gönderimi
+    // Password change form submission
     $('#securityForm').submit(function(e) {
         e.preventDefault();
         const formData = {
@@ -414,7 +414,7 @@ $(document).ready(function() {
         };
 
         if (formData.new_password !== formData.new_password_confirm) {
-            alert('Yeni şifreler eşleşmiyor');
+            alert('New passwords do not match');
             return;
         }
 
@@ -424,17 +424,17 @@ $(document).ready(function() {
             contentType: 'application/json',
             data: JSON.stringify(formData),
             success: function() {
-                alert('Şifreniz başarıyla değiştirildi');
+                alert('Password successfully changed');
                 $('#securityForm')[0].reset();
             }
         });
     });
 
-    // Hesap silme formu gönderimi
+    // Account deletion form submission
     $('#deleteAccountForm').submit(function(e) {
         e.preventDefault();
         if (!$('#confirmDelete').is(':checked')) {
-            alert('Lütfen hesap silme işlemini onaylayın');
+            alert('Please confirm account deletion');
             return;
         }
 
@@ -450,7 +450,7 @@ $(document).ready(function() {
         });
     });
 
-    // Hedefleri yükle
+    // Load goals
     function loadGoals() {
         $.get('/api/goals', function(goals) {
             const goalsList = $('#goalsList');
@@ -468,22 +468,22 @@ $(document).ready(function() {
                                 <div>
                                     ${goal.target_weight ? `
                                         <div class="mb-2">
-                                            <strong>Hedef Kilo:</strong> ${goal.target_weight} kg
+                                            <strong>Target Weight:</strong> ${goal.target_weight} kg
                                         </div>
                                     ` : ''}
                                     ${goal.target_exercise_minutes ? `
                                         <div class="mb-2">
-                                            <strong>Günlük Egzersiz:</strong> ${goal.target_exercise_minutes} dk
+                                            <strong>Daily Exercise:</strong> ${goal.target_exercise_minutes} min
                                         </div>
                                     ` : ''}
                                     ${goal.target_water_ml ? `
                                         <div class="mb-2">
-                                            <strong>Günlük Su:</strong> ${goal.target_water_ml} ml
+                                            <strong>Daily Water:</strong> ${goal.target_water_ml} ml
                                         </div>
                                     ` : ''}
                                     <small class="text-muted">
                                         <i class="fas fa-calendar-alt me-1"></i>
-                                        ${daysLeft} gün kaldı
+                                        ${daysLeft} days left
                                     </small>
                                 </div>
                                 <button class="btn btn-sm btn-outline-danger delete-goal" data-id="${goal.id}">
@@ -498,14 +498,14 @@ $(document).ready(function() {
                 goalsList.html(`
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-bullseye fa-2x mb-2"></i>
-                        <p>Henüz hedef belirlenmemiş</p>
+                        <p>No goals set yet</p>
                     </div>
                 `);
             }
         });
     }
 
-    // Hatırlatıcıları yükle
+    // Load reminders
     function loadReminders() {
         $.get('/api/reminders', function(reminders) {
             const remindersList = $('#remindersList');
@@ -545,17 +545,17 @@ $(document).ready(function() {
                 remindersList.html(`
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-bell fa-2x mb-2"></i>
-                        <p>Henüz hatırlatıcı eklenmemiş</p>
+                        <p>No reminders added yet</p>
                     </div>
                 `);
             }
         });
     }
 
-    // Hedef silme
+    // Delete goal
     $(document).on('click', '.delete-goal', function() {
         const id = $(this).data('id');
-        if (confirm('Bu hedefi silmek istediğinize emin misiniz?')) {
+        if (confirm('Are you sure you want to delete this goal?')) {
             $.ajax({
                 url: `/api/goals/${id}`,
                 method: 'DELETE',
@@ -564,10 +564,10 @@ $(document).ready(function() {
         }
     });
 
-    // Hatırlatıcı silme
+    // Delete reminder
     $(document).on('click', '.delete-reminder', function() {
         const id = $(this).data('id');
-        if (confirm('Bu hatırlatıcıyı silmek istediğinize emin misiniz?')) {
+        if (confirm('Are you sure you want to delete this reminder?')) {
             $.ajax({
                 url: `/api/reminders/${id}`,
                 method: 'DELETE',
@@ -576,7 +576,7 @@ $(document).ready(function() {
         }
     });
 
-    // Hatırlatıcı durumunu değiştirme
+    // Toggle reminder status
     $(document).on('change', '.toggle-reminder', function() {
         const id = $(this).data('id');
         const active = $(this).is(':checked');
@@ -589,7 +589,7 @@ $(document).ready(function() {
         });
     });
 
-    // Başlangıç yüklemeleri
+    // Initial loads
     loadGoals();
     loadReminders();
 });

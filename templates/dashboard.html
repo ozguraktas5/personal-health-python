@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Sağlık Takip{% endblock %}
+{% block title %}Dashboard - Health Tracker{% endblock %}
 
 {% block content %}
-<div class="welcome-banner p-4 mb-4 bg-gradient-primary text-white rounded-3">
+<div class="welcome-banner p-4 mb-4 rounded-3">
     <div class="row align-items-center">
         <div class="col-auto">
             <div class="profile-icon">
@@ -17,20 +17,23 @@
 </div>
 
 <div class="row">
-    <!-- Özet Kartları -->
+    <!-- Summary Cards -->
     <div class="col-md-6 col-lg-3 mb-4">
         <div class="card h-100">
             <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted">Son Kilo</h6>
+                <h6 class="card-subtitle mb-2 text-muted">Last Weight</h6>
                 <h3 class="card-title mb-3">
                     {% if last_weight %}
                         {{ "%.1f"|format(last_weight.weight) }} kg
+                        <small class="d-block text-muted" style="font-size: 0.9rem;">
+                            {{ last_weight.date.strftime('%d/%m/%Y') }}
+                        </small>
                     {% else %}
                         --
                     {% endif %}
                 </h3>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addWeightModal">
-                    <i class="fas fa-plus me-1"></i>Kilo Ekle
+                    <i class="fas fa-plus me-1"></i>Add Weight
                 </button>
             </div>
         </div>
@@ -39,16 +42,19 @@
     <div class="col-md-6 col-lg-3 mb-4">
         <div class="card h-100">
             <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted">Bugünkü Egzersiz</h6>
+                <h6 class="card-subtitle mb-2 text-muted">Last Exercise</h6>
                 <h3 class="card-title mb-3">
-                    {% if today_exercise %}
-                        {{ today_exercise.duration }} dk
+                    {% if last_exercise %}
+                        {{ last_exercise.duration }} min
+                        <small class="d-block text-muted" style="font-size: 0.9rem;">
+                            {{ last_exercise.type.capitalize() }}
+                        </small>
                     {% else %}
-                        0 dk
+                        0 min
                     {% endif %}
                 </h3>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addExerciseModal">
-                    <i class="fas fa-plus me-1"></i>Egzersiz Ekle
+                    <i class="fas fa-plus me-1"></i>Add Exercise
                 </button>
             </div>
         </div>
@@ -57,16 +63,19 @@
     <div class="col-md-6 col-lg-3 mb-4">
         <div class="card h-100">
             <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted">Bugünkü Su</h6>
+                <h6 class="card-subtitle mb-2 text-muted">Last Water Amount</h6>
                 <h3 class="card-title mb-3">
-                    {% if today_water %}
-                        {{ today_water.amount }} ml
+                    {% if last_water %}
+                        {{ last_water.amount }} ml
+                        <small class="d-block text-muted" style="font-size: 0.9rem;">
+                            {{ last_water.date.strftime('%H:%M') }}
+                        </small>
                     {% else %}
                         0 ml
                     {% endif %}
                 </h3>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addWaterModal">
-                    <i class="fas fa-plus me-1"></i>Su Ekle
+                    <i class="fas fa-plus me-1"></i>Add Water
                 </button>
             </div>
         </div>
@@ -75,44 +84,53 @@
     <div class="col-md-6 col-lg-3 mb-4">
         <div class="card h-100">
             <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted">Bugünkü Kalori</h6>
-                <h3 class="card-title mb-3" id="todayCalories">0 kcal</h3>
+                <h6 class="card-subtitle mb-2 text-muted">Last Calories Amount</h6>
+                <h3 class="card-title mb-3">
+                    {% if last_nutrition %}
+                        {{ last_nutrition.calories }} kcal
+                        <small class="d-block text-muted" style="font-size: 0.9rem;">
+                            {{ last_nutrition.food_name }}
+                        </small>
+                    {% else %}
+                        0 kcal
+                    {% endif %}
+                </h3>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addNutritionModal">
-                    <i class="fas fa-plus me-1"></i>Öğün Ekle
+                    <i class="fas fa-plus me-1"></i>Add Meal
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Hedefler -->
+    <!-- Goals -->
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h5 class="card-title mb-0">Aktif Hedefler</h5>
+                    <h5 class="card-title mb-0">Active Goals</h5>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addGoalModal">
-                        <i class="fas fa-plus me-1"></i>Yeni Hedef
+                        <i class="fas fa-plus me-1"></i>New Goal
                     </button>
                 </div>
                 <div id="activeGoals">
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-bullseye fa-2x mb-2"></i>
-                        <p>Henüz hedef belirlenmemiş</p>
+                        <p>No goals set yet</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Günlük Öğünler -->
+    <!-- Daily Meals -->
     <div class="col-md-6 mb-4">
         <div class="card h-100">
             <div class="card-body">
-                <h5 class="card-title mb-4">Bugünkü Öğünler</h5>
+                <h5 class="card-title mb-4">Today's Meals</h5>
                 <div id="todayMeals">
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-utensils fa-2x mb-2"></i>
-                        <p>Henüz öğün kaydı yok</p>
+                        <p>No meals recorded yet</p>
                     </div>
                 </div>
             </div>
@@ -120,75 +138,75 @@
     </div>
 </div>
 
-<!-- Kilo Ekleme Modal -->
+<!-- Add Weight Modal -->
 <div class="modal fade" id="addWeightModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Kilo Ekle</h5>
+                <h5 class="modal-title">Add Weight</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form method="POST" action="{{ url_for('add_weight') }}">
                     <div class="mb-3">
-                        <label class="form-label">Kilo (kg)</label>
+                        <label class="form-label">Weight (kg)</label>
                         <input type="number" class="form-control" name="weight" step="0.1" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Egzersiz Ekleme Modal -->
+<!-- Add Exercise Modal -->
 <div class="modal fade" id="addExerciseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Egzersiz Ekle</h5>
+                <h5 class="modal-title">Add Exercise</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form method="POST" action="{{ url_for('add_exercise') }}">
                     <div class="mb-3">
-                        <label class="form-label">Egzersiz Türü</label>
+                        <label class="form-label">Exercise Type</label>
                         <select class="form-select" name="type" required>
-                            <option value="walking">Yürüyüş</option>
-                            <option value="running">Koşu</option>
-                            <option value="cycling">Bisiklet</option>
-                            <option value="swimming">Yüzme</option>
-                            <option value="gym">Spor Salonu</option>
-                            <option value="other">Diğer</option>
+                            <option value="walking">Walking</option>
+                            <option value="running">Running</option>
+                            <option value="cycling">Cycling</option>
+                            <option value="swimming">Swimming</option>
+                            <option value="gym">Gym</option>
+                            <option value="other">Other</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Süre (dakika)</label>
+                        <label class="form-label">Duration (minutes)</label>
                         <input type="number" class="form-control" name="duration" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Yakılan Kalori</label>
+                        <label class="form-label">Calories Burned</label>
                         <input type="number" class="form-control" name="calories">
                     </div>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Su Ekleme Modal -->
+<!-- Add Water Modal -->
 <div class="modal fade" id="addWaterModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Su Ekle</h5>
+                <h5 class="modal-title">Add Water</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form method="POST" action="{{ url_for('add_water') }}">
                     <div class="mb-3">
-                        <label class="form-label">Miktar (ml)</label>
+                        <label class="form-label">Amount (ml)</label>
                         <div class="d-flex gap-2">
                             <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="setWaterAmount(200)">200ml</button>
                             <button type="button" class="btn btn-outline-primary flex-grow-1" onclick="setWaterAmount(500)">500ml</button>
@@ -196,102 +214,102 @@
                         </div>
                         <input type="number" class="form-control mt-2" name="amount" id="waterAmount" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Öğün Ekleme Modal -->
+<!-- Add Meal Modal -->
 <div class="modal fade" id="addNutritionModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Öğün Ekle</h5>
+                <h5 class="modal-title">Add Meal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="nutritionForm">
+                <form id="nutritionForm" onsubmit="return false;">
                     <div class="mb-3">
-                        <label class="form-label">Öğün Türü</label>
+                        <label class="form-label">Meal Type</label>
                         <select class="form-select" name="meal_type" required>
-                            <option value="breakfast">Kahvaltı</option>
-                            <option value="lunch">Öğle Yemeği</option>
-                            <option value="dinner">Akşam Yemeği</option>
-                            <option value="snack">Ara Öğün</option>
+                            <option value="breakfast">Breakfast</option>
+                            <option value="lunch">Lunch</option>
+                            <option value="dinner">Dinner</option>
+                            <option value="snack">Snack</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Yemek Adı</label>
+                        <label class="form-label">Food Name</label>
                         <input type="text" class="form-control" name="food_name" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Kalori</label>
-                        <input type="number" class="form-control" name="calories" required>
+                        <label class="form-label">Calories</label>
+                        <input type="number" class="form-control" name="calories" min="0" step="1" required>
                     </div>
                     <div class="row">
                         <div class="col-md-4">
                             <div class="mb-3">
                                 <label class="form-label">Protein (g)</label>
-                                <input type="number" class="form-control" name="protein" step="0.1">
+                                <input type="number" class="form-control" name="protein" min="0" step="0.1">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Karbonhidrat (g)</label>
-                                <input type="number" class="form-control" name="carbs" step="0.1">
+                                <label class="form-label">Carbs (g)</label>
+                                <input type="number" class="form-control" name="carbs" min="0" step="0.1">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Yağ (g)</label>
-                                <input type="number" class="form-control" name="fat" step="0.1">
+                                <label class="form-label">Fat (g)</label>
+                                <input type="number" class="form-control" name="fat" min="0" step="0.1">
                             </div>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Porsiyon (g/ml)</label>
-                        <input type="number" class="form-control" name="portion_size" step="0.1">
+                        <label class="form-label">Portion Size (g/ml)</label>
+                        <input type="number" class="form-control" name="portion_size" min="0" step="0.1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Notlar</label>
+                        <label class="form-label">Notes</label>
                         <textarea class="form-control" name="notes" rows="2"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="button" class="btn btn-primary" id="saveMealBtn">Save</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Hedef Ekleme Modal -->
+<!-- Add Goal Modal -->
 <div class="modal fade" id="addGoalModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Yeni Hedef</h5>
+                <h5 class="modal-title">New Goal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="goalForm">
                     <div class="mb-3">
-                        <label class="form-label">Hedef Kilo (kg)</label>
+                        <label class="form-label">Target Weight (kg)</label>
                         <input type="number" class="form-control" name="target_weight" step="0.1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Günlük Egzersiz Hedefi (dakika)</label>
+                        <label class="form-label">Daily Exercise Goal (minutes)</label>
                         <input type="number" class="form-control" name="target_exercise_minutes">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Günlük Su Hedefi (ml)</label>
+                        <label class="form-label">Daily Water Goal (ml)</label>
                         <input type="number" class="form-control" name="target_water_ml">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hedef Tarihi</label>
+                        <label class="form-label">Target Date</label>
                         <input type="date" class="form-control" name="target_date" required>
                     </div>
-                    <button type="submit" class="btn btn-primary">Kaydet</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
                 </form>
             </div>
         </div>
@@ -306,11 +324,164 @@
     border-radius: 15px;
     overflow: hidden;
 }
+
+/* Welcome Banner Styles */
+.welcome-banner {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner h1 {
+    color: white;
+    font-size: 2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner .profile-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner .profile-icon i {
+    color: white;
+}
+
 .card:hover {
     transform: translateY(-5px);
 }
-.welcome-banner {
+.profile-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+.input-group-text {
+    background-color: #f8f9fa;
+    border-right: none;
+}
+.input-group .form-control {
+    border-left: none;
+}
+.input-group .form-control:focus {
+    border-color: #ced4da;
+    box-shadow: none;
+}
+.card i {
+    transition: transform 0.3s;
+}
+.card:hover i {
+    transform: scale(1.1);
+}
+
+/* Modal Styles */
+.modal-content {
+    background: white;
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    border-bottom: 1px solid #eee;
+    padding: 1.5rem;
+}
+
+.modal-header .modal-title {
+    color: #333;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-content .form-label {
+    color: #555;
+    font-weight: 500;
+}
+
+.modal-content .form-control,
+.modal-content .form-select {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+.modal-content .form-control:focus,
+.modal-content .form-select:focus {
+    border-color: #4facfe;
+    box-shadow: 0 0 0 0.2rem rgba(79, 172, 254, 0.25);
+}
+
+.modal-content .btn-close {
+    color: #333;
+}
+
+.modal-content .btn-primary,
+.modal-content button[type="submit"] {
+    background-color: #2196f3;
+    border: none;
+    padding: 0.5rem 1.5rem;
+    color: white;
+    border-radius: 8px;
+    transition: background-color 0.2s;
+}
+
+.modal-content .btn-primary:hover,
+.modal-content button[type="submit"]:hover {
+    background-color: #2196f3;
+}
+
+/* Remove old modal background colors */
+#addWeightModal .modal-content,
+#addExerciseModal .modal-content,
+#addWaterModal .modal-content,
+#addNutritionModal .modal-content,
+#addGoalModal .modal-content {
+    background: white;
+}
+
+/* Card Styles */
+.card {
+    transition: transform 0.2s;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+/* Welcome Banner Styles */
+.welcome-banner {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner h1 {
+    color: white;
+    font-size: 2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner .profile-icon {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+.welcome-banner .profile-icon i {
+    color: white;
+}
+
+.card:hover {
+    transform: translateY(-5px);
 }
 .profile-icon {
     width: 60px;
@@ -342,14 +513,14 @@
 
 {% block extra_js %}
 <script>
-// Su miktarı ayarlama
+// Set water amount
 function setWaterAmount(amount) {
     document.getElementById('waterAmount').value = amount;
 }
 
-// Sayfa yüklendiğinde
+// When page loads
 $(document).ready(function() {
-    // Bugünkü öğünleri yükle
+    // Load today's meals
     function loadTodayMeals() {
         const today = new Date().toISOString().split('T')[0];
         $.get(`/api/nutrition/daily/${today}`, function(data) {
@@ -358,10 +529,10 @@ $(document).ready(function() {
             
             if (data.meals && Object.keys(data.meals).length > 0) {
                 const mealTypes = {
-                    'breakfast': 'Kahvaltı',
-                    'lunch': 'Öğle Yemeği',
-                    'dinner': 'Akşam Yemeği',
-                    'snack': 'Ara Öğün'
+                    'breakfast': 'Breakfast',
+                    'lunch': 'Lunch',
+                    'dinner': 'Dinner',
+                    'snack': 'Snack'
                 };
                 
                 Object.entries(data.meals).forEach(([type, meals]) => {
@@ -388,20 +559,20 @@ $(document).ready(function() {
                     mealsList.append(mealSection);
                 });
                 
-                // Toplam kaloriyi güncelle
+                // Update total calories
                 $('#todayCalories').text(`${data.daily_totals.total_calories} kcal`);
             } else {
                 mealsList.html(`
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-utensils fa-2x mb-2"></i>
-                        <p>Henüz öğün kaydı yok</p>
+                        <p>No meals recorded yet</p>
                     </div>
                 `);
             }
         });
     }
 
-    // Aktif hedefleri yükle
+    // Load active goals
     function loadActiveGoals() {
         $.get('/api/goals/active', function(goal) {
             const goalsList = $('#activeGoals');
@@ -417,8 +588,8 @@ $(document).ready(function() {
                         ${goal.target_weight ? `
                             <div class="mb-3">
                                 <label class="form-label d-flex justify-content-between">
-                                    <span>Hedef Kilo: ${goal.target_weight} kg</span>
-                                    <span class="text-muted">${daysLeft} gün kaldı</span>
+                                    <span>Target Weight: ${goal.target_weight} kg</span>
+                                    <span class="text-muted">${daysLeft} days left</span>
                                 </label>
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" style="width: 0%"></div>
@@ -428,7 +599,7 @@ $(document).ready(function() {
                         
                         ${goal.target_exercise_minutes ? `
                             <div class="mb-3">
-                                <label class="form-label">Günlük Egzersiz: ${goal.target_exercise_minutes} dk</label>
+                                <label class="form-label">Daily Exercise: ${goal.target_exercise_minutes} min</label>
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                 </div>
@@ -437,7 +608,7 @@ $(document).ready(function() {
                         
                         ${goal.target_water_ml ? `
                             <div class="mb-3">
-                                <label class="form-label">Günlük Su: ${goal.target_water_ml} ml</label>
+                                <label class="form-label">Daily Water: ${goal.target_water_ml} ml</label>
                                 <div class="progress">
                                     <div class="progress-bar" role="progressbar" style="width: 0%"></div>
                                 </div>
@@ -450,41 +621,90 @@ $(document).ready(function() {
                 goalsList.html(`
                     <div class="text-center text-muted py-4">
                         <i class="fas fa-bullseye fa-2x mb-2"></i>
-                        <p>Henüz hedef belirlenmemiş</p>
+                        <p>No goals set yet</p>
                     </div>
                 `);
             }
         });
     }
 
-    // Öğün ekleme
-    $('#nutritionForm').submit(function(e) {
-        e.preventDefault();
+    // Add meal
+    $('#saveMealBtn').on('click', function() {
+        // Get form values
+        const mealType = $('#addNutritionModal select[name="meal_type"]').val();
+        const foodName = $('#addNutritionModal input[name="food_name"]').val();
+        const caloriesInput = $('#addNutritionModal input[name="calories"]').val();
+        const proteinInput = $('#addNutritionModal input[name="protein"]').val();
+        const carbsInput = $('#addNutritionModal input[name="carbs"]').val();
+        const fatInput = $('#addNutritionModal input[name="fat"]').val();
+        const portionSizeInput = $('#addNutritionModal input[name="portion_size"]').val();
+        const notes = $('#addNutritionModal textarea[name="notes"]').val();
+
+        // Validate required fields
+        if (!mealType || !foodName || !caloriesInput) {
+            alert('Please fill in all required fields (Meal Type, Food Name, and Calories)');
+            return;
+        }
+
+        // Parse numeric values
+        const calories = parseInt(caloriesInput);
+        if (isNaN(calories) || calories <= 0) {
+            alert('Please enter a valid number of calories (greater than 0)');
+            return;
+        }
+
+        // Create form data object
         const formData = {
-            meal_type: $('select[name="meal_type"]').val(),
-            food_name: $('input[name="food_name"]').val(),
-            calories: parseInt($('input[name="calories"]').val()),
-            protein: parseFloat($('input[name="protein"]').val()) || null,
-            carbs: parseFloat($('input[name="carbs"]').val()) || null,
-            fat: parseFloat($('input[name="fat"]').val()) || null,
-            portion_size: parseFloat($('input[name="portion_size"]').val()) || null,
-            notes: $('textarea[name="notes"]').val() || null
+            meal_type: mealType,
+            food_name: foodName,
+            calories: calories,
+            protein: proteinInput ? parseFloat(proteinInput) : null,
+            carbs: carbsInput ? parseFloat(carbsInput) : null,
+            fat: fatInput ? parseFloat(fatInput) : null,
+            portion_size: portionSizeInput ? parseFloat(portionSizeInput) : null,
+            notes: notes || null,
+            date: new Date().toISOString().slice(0, 19).replace('T', ' ')
         };
 
+        // Debug log
+        console.log('Form values:', {
+            mealType,
+            foodName,
+            caloriesInput,
+            proteinInput,
+            carbsInput,
+            fatInput,
+            portionSizeInput,
+            notes
+        });
+        console.log('Sending form data:', formData);
+
+        // Send AJAX request
         $.ajax({
             url: '/api/nutrition',
             method: 'POST',
             contentType: 'application/json',
             data: JSON.stringify(formData),
-            success: function() {
+            success: function(response) {
+                console.log('Success response:', response);
                 $('#addNutritionModal').modal('hide');
                 $('#nutritionForm')[0].reset();
                 loadTodayMeals();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error details:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+                const errorMessage = xhr.responseJSON?.message || error;
+                console.error('Error message:', errorMessage);
+                alert('Error saving meal: ' + errorMessage);
             }
         });
     });
 
-    // Hedef ekleme
+    // Add goal
     $('#goalForm').submit(function(e) {
         e.preventDefault();
         const formData = {
@@ -507,10 +727,10 @@ $(document).ready(function() {
         });
     });
 
-    // Öğün silme
+    // Delete meal
     $(document).on('click', '.delete-meal', function() {
         const id = $(this).data('id');
-        if (confirm('Bu öğünü silmek istediğinize emin misiniz?')) {
+        if (confirm('Are you sure you want to delete this meal?')) {
             $.ajax({
                 url: `/api/nutrition/${id}`,
                 method: 'DELETE',
@@ -519,7 +739,7 @@ $(document).ready(function() {
         }
     });
 
-    // Başlangıç yüklemeleri
+    // Initial loads
     loadTodayMeals();
     loadActiveGoals();
 });

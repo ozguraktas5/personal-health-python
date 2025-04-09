@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Hedefler - Sağlık Takip{% endblock %}
+{% block title %}Goals - Health Tracker{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -76,158 +76,158 @@
 
 {% block content %}
 <div class="container">
-    <!-- Üst Başlık -->
+    <!-- Header -->
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h1>Hedeflerim</h1>
+                <h1>My Goals</h1>
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addGoalModal">
-                    <i class="fas fa-plus me-2"></i>Yeni Hedef Belirle
+                    <i class="fas fa-plus me-2"></i>Set New Goal
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Özet İstatistikler -->
+    <!-- Summary Statistics -->
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="goal-stat">
                 <i class="fas fa-bullseye"></i>
                 <h3 id="activeGoalsCount">0</h3>
-                <p class="mb-0">Aktif Hedef</p>
+                <p class="mb-0">Active Goals</p>
             </div>
         </div>
         <div class="col-md-3">
             <div class="goal-stat">
                 <i class="fas fa-check-circle"></i>
                 <h3 id="completedGoalsCount">0</h3>
-                <p class="mb-0">Tamamlanan Hedef</p>
+                <p class="mb-0">Completed Goals</p>
             </div>
         </div>
         <div class="col-md-3">
             <div class="goal-stat">
                 <i class="fas fa-trophy"></i>
                 <h3 id="achievementsCount">0</h3>
-                <p class="mb-0">Başarı Rozeti</p>
+                <p class="mb-0">Achievement Badges</p>
             </div>
         </div>
         <div class="col-md-3">
             <div class="goal-stat">
                 <i class="fas fa-chart-line"></i>
                 <h3 id="successRate">0%</h3>
-                <p class="mb-0">Başarı Oranı</p>
+                <p class="mb-0">Success Rate</p>
             </div>
         </div>
     </div>
 
-    <!-- Aktif Hedefler -->
+    <!-- Active Goals -->
     <div class="row mb-4">
         <div class="col-12">
-            <h4 class="mb-3">Aktif Hedefler</h4>
+            <h4 class="mb-3">Active Goals</h4>
             <div class="row" id="activeGoalsList">
-                <!-- Aktif hedefler JavaScript ile yüklenecek -->
+                <!-- Active goals will be loaded via JavaScript -->
             </div>
         </div>
     </div>
 
-    <!-- Tamamlanan Hedefler -->
+    <!-- Completed Goals -->
     <div class="row">
         <div class="col-12">
-            <h4 class="mb-3">Tamamlanan Hedefler</h4>
+            <h4 class="mb-3">Completed Goals</h4>
             <div class="row" id="completedGoalsList">
-                <!-- Tamamlanan hedefler JavaScript ile yüklenecek -->
+                <!-- Completed goals will be loaded via JavaScript -->
             </div>
         </div>
     </div>
 </div>
 
-<!-- Yeni Hedef Ekleme Modal -->
+<!-- New Goal Modal -->
 <div class="modal fade" id="addGoalModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Yeni Hedef Belirle</h5>
+                <h5 class="modal-title">Set New Goal</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <form id="newGoalForm">
                     <div class="mb-3">
-                        <label class="form-label">Hedef Türü</label>
+                        <label class="form-label">Goal Type</label>
                         <select class="form-select" name="goal_type" required>
-                            <option value="">Seçiniz</option>
-                            <option value="weight">Kilo Hedefi</option>
-                            <option value="exercise">Egzersiz Hedefi</option>
-                            <option value="water">Su Tüketimi Hedefi</option>
-                            <option value="steps">Adım Hedefi</option>
+                            <option value="">Select</option>
+                            <option value="weight">Weight Goal</option>
+                            <option value="exercise">Exercise Goal</option>
+                            <option value="water">Water Intake Goal</option>
+                            <option value="steps">Steps Goal</option>
                         </select>
                     </div>
 
-                    <!-- Kilo Hedefi Alanları -->
+                    <!-- Weight Goal Fields -->
                     <div class="goal-fields" id="weightGoalFields" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label">Hedef Kilo (kg)</label>
+                            <label class="form-label">Target Weight (kg)</label>
                             <input type="number" class="form-control" name="target_weight" step="0.1">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Haftalık Hedef (kg)</label>
+                            <label class="form-label">Weekly Goal (kg)</label>
                             <select class="form-select" name="weekly_goal">
-                                <option value="0.25">0.25 kg/hafta</option>
-                                <option value="0.5">0.5 kg/hafta</option>
-                                <option value="1">1 kg/hafta</option>
+                                <option value="0.25">0.25 kg/week</option>
+                                <option value="0.5">0.5 kg/week</option>
+                                <option value="1">1 kg/week</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Egzersiz Hedefi Alanları -->
+                    <!-- Exercise Goal Fields -->
                     <div class="goal-fields" id="exerciseGoalFields" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label">Günlük Egzersiz Süresi (dakika)</label>
+                            <label class="form-label">Daily Exercise Duration (minutes)</label>
                             <input type="number" class="form-control" name="target_exercise_minutes">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Egzersiz Türü</label>
+                            <label class="form-label">Exercise Type</label>
                             <select class="form-select" name="exercise_type">
-                                <option value="any">Herhangi</option>
-                                <option value="walking">Yürüyüş</option>
-                                <option value="running">Koşu</option>
-                                <option value="cycling">Bisiklet</option>
-                                <option value="swimming">Yüzme</option>
-                                <option value="gym">Spor Salonu</option>
+                                <option value="any">Any</option>
+                                <option value="walking">Walking</option>
+                                <option value="running">Running</option>
+                                <option value="cycling">Cycling</option>
+                                <option value="swimming">Swimming</option>
+                                <option value="gym">Gym</option>
                             </select>
                         </div>
                     </div>
 
-                    <!-- Su Hedefi Alanları -->
+                    <!-- Water Goal Fields -->
                     <div class="goal-fields" id="waterGoalFields" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label">Günlük Su Hedefi (ml)</label>
+                            <label class="form-label">Daily Water Goal (ml)</label>
                             <input type="number" class="form-control" name="target_water_ml" step="100">
                         </div>
                     </div>
 
-                    <!-- Adım Hedefi Alanları -->
+                    <!-- Steps Goal Fields -->
                     <div class="goal-fields" id="stepsGoalFields" style="display: none;">
                         <div class="mb-3">
-                            <label class="form-label">Günlük Adım Hedefi</label>
+                            <label class="form-label">Daily Steps Goal</label>
                             <input type="number" class="form-control" name="target_steps" step="1000">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Hedef Tarihi</label>
+                        <label class="form-label">Target Date</label>
                         <input type="date" class="form-control" name="target_date" required>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Notlar</label>
+                        <label class="form-label">Notes</label>
                         <textarea class="form-control" name="notes" rows="3"></textarea>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="submit" form="newGoalForm" class="btn btn-primary">
-                    <i class="fas fa-save me-2"></i>Hedefi Kaydet
+                    <i class="fas fa-save me-2"></i>Save Goal
                 </button>
             </div>
         </div>
@@ -238,7 +238,7 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    // Hedef türüne göre form alanlarını göster/gizle
+    // Show/hide form fields based on goal type
     $('select[name="goal_type"]').change(function() {
         $('.goal-fields').hide();
         const goalType = $(this).val();
@@ -247,13 +247,13 @@ $(document).ready(function() {
         }
     });
 
-    // Hedefleri yükle
+    // Load goals
     function loadGoals() {
         $.get('/api/goals', function(data) {
             const activeGoals = data.filter(goal => !goal.completed);
             const completedGoals = data.filter(goal => goal.completed);
 
-            // İstatistikleri güncelle
+            // Update statistics
             $('#activeGoalsCount').text(activeGoals.length);
             $('#completedGoalsCount').text(completedGoals.length);
             $('#achievementsCount').text(data.achievements || 0);
@@ -263,7 +263,7 @@ $(document).ready(function() {
                     : '0%'
             );
 
-            // Aktif hedefleri listele
+            // List active goals
             const activeGoalsList = $('#activeGoalsList');
             activeGoalsList.empty();
 
@@ -277,19 +277,19 @@ $(document).ready(function() {
                 switch(goal.goal_type) {
                     case 'weight':
                         icon = 'fas fa-weight';
-                        title = 'Kilo Hedefi';
+                        title = 'Weight Goal';
                         break;
                     case 'exercise':
                         icon = 'fas fa-running';
-                        title = 'Egzersiz Hedefi';
+                        title = 'Exercise Goal';
                         break;
                     case 'water':
                         icon = 'fas fa-glass-water';
-                        title = 'Su Hedefi';
+                        title = 'Water Goal';
                         break;
                     case 'steps':
                         icon = 'fas fa-shoe-prints';
-                        title = 'Adım Hedefi';
+                        title = 'Steps Goal';
                         break;
                 }
 
@@ -312,7 +312,7 @@ $(document).ready(function() {
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <small class="text-muted">
-                                        <i class="fas fa-calendar-alt me-1"></i>${daysLeft} gün kaldı
+                                        <i class="fas fa-calendar-alt me-1"></i>${daysLeft} days left
                                     </small>
                                     <button class="btn btn-sm btn-outline-danger delete-goal" data-id="${goal.id}">
                                         <i class="fas fa-trash"></i>
@@ -331,13 +331,13 @@ $(document).ready(function() {
                     <div class="col-12">
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-bullseye fa-2x mb-2"></i>
-                            <p>Henüz aktif hedef bulunmuyor</p>
+                            <p>No active goals yet</p>
                         </div>
                     </div>
                 `);
             }
 
-            // Tamamlanan hedefleri listele
+            // List completed goals
             const completedGoalsList = $('#completedGoalsList');
             completedGoalsList.empty();
 
@@ -347,19 +347,19 @@ $(document).ready(function() {
                 switch(goal.goal_type) {
                     case 'weight':
                         icon = 'fas fa-weight';
-                        title = 'Kilo Hedefi';
+                        title = 'Weight Goal';
                         break;
                     case 'exercise':
                         icon = 'fas fa-running';
-                        title = 'Egzersiz Hedefi';
+                        title = 'Exercise Goal';
                         break;
                     case 'water':
                         icon = 'fas fa-glass-water';
-                        title = 'Su Hedefi';
+                        title = 'Water Goal';
                         break;
                     case 'steps':
                         icon = 'fas fa-shoe-prints';
-                        title = 'Adım Hedefi';
+                        title = 'Steps Goal';
                         break;
                 }
 
@@ -375,7 +375,7 @@ $(document).ready(function() {
                                 </div>
                                 <h5 class="mb-3">${title}</h5>
                                 <div class="d-flex justify-content-between align-items-center">
-                                    <span>Hedef: ${goal.target_value}</span>
+                                    <span>Target: ${goal.target_value}</span>
                                     <span>100%</span>
                                 </div>
                             </div>
@@ -383,7 +383,7 @@ $(document).ready(function() {
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <small class="text-muted">
                                         <i class="fas fa-check-circle me-1"></i>
-                                        Tamamlandı: ${completionDate.toLocaleDateString()}
+                                        Completed: ${completionDate.toLocaleDateString()}
                                     </small>
                                 </div>
                                 ${goal.notes ? `<p class="card-text small text-muted mb-0">${goal.notes}</p>` : ''}
@@ -399,7 +399,7 @@ $(document).ready(function() {
                     <div class="col-12">
                         <div class="text-center text-muted py-4">
                             <i class="fas fa-trophy fa-2x mb-2"></i>
-                            <p>Henüz tamamlanan hedef bulunmuyor</p>
+                            <p>No completed goals yet</p>
                         </div>
                     </div>
                 `);
@@ -407,7 +407,7 @@ $(document).ready(function() {
         });
     }
 
-    // Yeni hedef ekleme
+    // Add new goal
     $('#newGoalForm').submit(function(e) {
         e.preventDefault();
         const goalType = $('select[name="goal_type"]').val();
@@ -448,10 +448,10 @@ $(document).ready(function() {
         });
     });
 
-    // Hedef silme
+    // Delete goal
     $(document).on('click', '.delete-goal', function() {
         const id = $(this).data('id');
-        if (confirm('Bu hedefi silmek istediğinize emin misiniz?')) {
+        if (confirm('Are you sure you want to delete this goal?')) {
             $.ajax({
                 url: `/api/goals/${id}`,
                 method: 'DELETE',
@@ -460,7 +460,7 @@ $(document).ready(function() {
         }
     });
 
-    // İlk yükleme
+    // Initial load
     loadGoals();
 });
 </script>

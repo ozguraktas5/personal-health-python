@@ -98,21 +98,17 @@ def index():
 def dashboard():
     today = datetime.utcnow().date()
     last_weight = Weight.query.filter_by(user_id=current_user.id).order_by(Weight.date.desc()).first()
+    last_exercise = Exercise.query.filter_by(user_id=current_user.id).order_by(Exercise.date.desc()).first()
+    last_water = WaterLog.query.filter_by(user_id=current_user.id).order_by(WaterLog.date.desc()).first()
     
-    today_exercise = Exercise.query.filter(
-        Exercise.user_id == current_user.id,
-        db.func.date(Exercise.date) == today
-    ).order_by(Exercise.date.desc()).first()
-    
-    today_water = WaterLog.query.filter(
-        WaterLog.user_id == current_user.id,
-        db.func.date(WaterLog.date) == today
-    ).order_by(WaterLog.date.desc()).first()
+    # Get last nutrition log regardless of date
+    last_nutrition = NutritionLog.query.filter_by(user_id=current_user.id).order_by(NutritionLog.date.desc()).first()
 
     return render_template('dashboard.html', 
                          last_weight=last_weight,
-                         today_exercise=today_exercise,
-                         today_water=today_water)
+                         last_exercise=last_exercise,
+                         last_water=last_water,
+                         last_nutrition=last_nutrition)
 
 # Login
 @app.route('/login', methods=['GET', 'POST'])
@@ -159,7 +155,7 @@ def add_weight():
     weight_log = Weight(weight=weight, user_id=current_user.id)
     db.session.add(weight_log)
     db.session.commit()
-    flash('Weight recorded successfully!')
+    flash('Weight recorded successfully!', 'weight')
     return redirect(url_for('dashboard'))
 
 # Add exercise
@@ -174,7 +170,7 @@ def add_exercise():
     )
     db.session.add(exercise)
     db.session.commit()
-    flash('Exercise recorded successfully!')
+    flash('Exercise recorded successfully!', 'exercise')
     return redirect(url_for('dashboard'))
 
 # Add water intake
@@ -187,7 +183,7 @@ def add_water():
     )
     db.session.add(water_log)
     db.session.commit()
-    flash('Water intake recorded successfully!')
+    flash('Water intake recorded successfully!', 'water')
     return redirect(url_for('dashboard'))
 
 def get_user_statistics(user_id):
@@ -304,6 +300,7 @@ def create_goal():
     
     db.session.add(new_goal)
     db.session.commit()
+    flash('New goal set successfully!', 'goal')
     
     return jsonify({
         'id': new_goal.id,
@@ -388,35 +385,42 @@ def delete_goal(goal_id):
 @login_required
 def add_nutrition():
     data = request.get_json()
+    print("Received nutrition data:", data)  # Debug print
     
-    nutrition_log = NutritionLog(
-        user_id=current_user.id,
-        meal_type=data['meal_type'],
-        food_name=data['food_name'],
-        calories=data['calories'],
-        protein=data.get('protein'),
-        carbs=data.get('carbs'),
-        fat=data.get('fat'),
-        portion_size=data.get('portion_size'),
-        notes=data.get('notes'),
-        date=datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')), '%Y-%m-%d %H:%M:%S')
-    )
-    
-    db.session.add(nutrition_log)
-    db.session.commit()
-    
-    return jsonify({
-        'id': nutrition_log.id,
-        'meal_type': nutrition_log.meal_type,
-        'food_name': nutrition_log.food_name,
-        'calories': nutrition_log.calories,
-        'protein': nutrition_log.protein,
-        'carbs': nutrition_log.carbs,
-        'fat': nutrition_log.fat,
-        'portion_size': nutrition_log.portion_size,
-        'notes': nutrition_log.notes,
-        'date': nutrition_log.date.strftime('%Y-%m-%d %H:%M:%S')
-    }), 201
+    try:
+        nutrition_log = NutritionLog(
+            user_id=current_user.id,
+            meal_type=data['meal_type'],
+            food_name=data['food_name'],
+            calories=data['calories'],
+            protein=data.get('protein'),
+            carbs=data.get('carbs'),
+            fat=data.get('fat'),
+            portion_size=data.get('portion_size'),
+            notes=data.get('notes'),
+            date=datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d %H:%M:%S')), '%Y-%m-%d %H:%M:%S')
+        )
+        
+        db.session.add(nutrition_log)
+        db.session.commit()
+        flash('Meal logged successfully!', 'nutrition')
+        
+        return jsonify({
+            'id': nutrition_log.id,
+            'meal_type': nutrition_log.meal_type,
+            'food_name': nutrition_log.food_name,
+            'calories': nutrition_log.calories,
+            'protein': nutrition_log.protein,
+            'carbs': nutrition_log.carbs,
+            'fat': nutrition_log.fat,
+            'portion_size': nutrition_log.portion_size,
+            'notes': nutrition_log.notes,
+            'date': nutrition_log.date.strftime('%Y-%m-%d %H:%M:%S')
+        }), 201
+    except Exception as e:
+        print("Error creating nutrition log:", str(e))  # Debug print
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/api/nutrition/daily/<date>', methods=['GET'])
 @login_required
@@ -493,6 +497,7 @@ def update_nutrition(log_id):
         log.date = datetime.strptime(data['date'], '%Y-%m-%d %H:%M:%S')
     
     db.session.commit()
+    flash('Meal updated successfully!', 'nutrition')
     
     return jsonify({
         'id': log.id,
@@ -517,6 +522,7 @@ def delete_nutrition(log_id):
     
     db.session.delete(log)
     db.session.commit()
+    flash('Meal deleted successfully!', 'nutrition')
     
     return '', 204
 
@@ -913,6 +919,182 @@ def check_due_reminders():
             })
     
     return jsonify(due_reminders)
+
+@app.route('/api/statistics')
+@login_required
+def get_statistics():
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    # Convert string dates to datetime objects
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
+    
+    # Adjust end_date to include the entire day
+    end_date = end_date.replace(hour=23, minute=59, second=59)
+    
+    print(f"Fetching statistics from {start_date} to {end_date}")  # Debug print
+    
+    # Get all records within date range
+    exercises = Exercise.query.filter(
+        Exercise.user_id == current_user.id,
+        Exercise.date >= start_date,
+        Exercise.date <= end_date
+    ).order_by(Exercise.date).all()
+    
+    print(f"Found {len(exercises)} exercise records")  # Debug print
+    for ex in exercises:
+        print(f"Exercise: {ex.type} - {ex.duration} minutes on {ex.date}")  # Debug print
+    
+    # Exercise type distribution
+    exercise_types = {
+        'walking': 0,
+        'running': 0,
+        'cycling': 0,
+        'swimming': 0,
+        'gym': 0,
+        'other': 0
+    }
+    
+    # Calculate total duration for each exercise type
+    for exercise in exercises:
+        exercise_type = exercise.type.lower().strip()  # Convert to lowercase and remove whitespace
+        if exercise_type in exercise_types:
+            exercise_types[exercise_type] += exercise.duration
+        else:
+            exercise_types['other'] += exercise.duration
+    
+    print("Exercise type totals:", exercise_types)  # Debug print
+    
+    # Calculate daily exercise totals
+    daily_exercise = {}
+    for exercise in exercises:
+        date_str = exercise.date.strftime('%Y-%m-%d')
+        if date_str not in daily_exercise:
+            daily_exercise[date_str] = 0
+        daily_exercise[date_str] += exercise.duration
+    
+    # Get date range for the chart
+    date_range = []
+    current_date = start_date
+    while current_date <= end_date:
+        date_range.append(current_date.strftime('%Y-%m-%d'))
+        current_date += timedelta(days=1)
+    
+    # Fill in missing dates with 0
+    exercise_values = [daily_exercise.get(date, 0) for date in date_range]
+    
+    # Calculate average exercise duration
+    total_days = (end_date - start_date).days + 1
+    avg_exercise = sum(daily_exercise.values()) / total_days if daily_exercise else 0
+    
+    # Calculate exercise trend
+    exercise_trend = 0
+    if daily_exercise:
+        dates = sorted(daily_exercise.keys())
+        if len(dates) > 1:
+            first_val = daily_exercise[dates[0]]
+            last_val = daily_exercise[dates[-1]]
+            if first_val > 0:
+                exercise_trend = ((last_val - first_val) / first_val) * 100
+    
+    # Get other data (weights, water, nutrition)
+    weights = Weight.query.filter(
+        Weight.user_id == current_user.id,
+        Weight.date >= start_date,
+        Weight.date <= end_date
+    ).order_by(Weight.date).all()
+    
+    water_logs = WaterLog.query.filter(
+        WaterLog.user_id == current_user.id,
+        WaterLog.date >= start_date,
+        WaterLog.date <= end_date
+    ).order_by(WaterLog.date).all()
+    
+    nutrition_logs = NutritionLog.query.filter(
+        NutritionLog.user_id == current_user.id,
+        NutritionLog.date >= start_date,
+        NutritionLog.date <= end_date
+    ).order_by(NutritionLog.date).all()
+    
+    # Calculate daily averages for other metrics
+    daily_calories = {}
+    daily_water = {}
+    
+    for log in nutrition_logs:
+        date_str = log.date.strftime('%Y-%m-%d')
+        if date_str not in daily_calories:
+            daily_calories[date_str] = 0
+        daily_calories[date_str] += log.calories
+    
+    for log in water_logs:
+        date_str = log.date.strftime('%Y-%m-%d')
+        if date_str not in daily_water:
+            daily_water[date_str] = 0
+        daily_water[date_str] += log.amount
+    
+    avg_calories = sum(daily_calories.values()) / total_days if daily_calories else 0
+    avg_water = sum(daily_water.values()) / total_days if daily_water else 0
+    
+    # Calculate weight change
+    first_weight = weights[0].weight if weights else None
+    last_weight = weights[-1].weight if weights else None
+    
+    # Calculate trends
+    def calculate_trend(values):
+        if not values:
+            return 0
+        dates = sorted(values.keys())
+        if len(dates) < 2:
+            return 0
+        first_val = values[dates[0]]
+        last_val = values[dates[-1]]
+        if first_val == 0:
+            return 0
+        return ((last_val - first_val) / first_val) * 100
+    
+    # Calculate nutrition distribution
+    total_protein = sum(log.protein for log in nutrition_logs if log.protein is not None)
+    total_carbs = sum(log.carbs for log in nutrition_logs if log.carbs is not None)
+    total_fat = sum(log.fat for log in nutrition_logs if log.fat is not None)
+    
+    return jsonify({
+        'averages': {
+            'calories': avg_calories,
+            'water': avg_water,
+            'exercise': avg_exercise
+        },
+        'weight': {
+            'start': first_weight,
+            'end': last_weight
+        },
+        'trends': {
+            'calories': calculate_trend(daily_calories),
+            'water': calculate_trend(daily_water),
+            'exercise': exercise_trend,
+            'weight': ((last_weight - first_weight) / first_weight * 100) if first_weight and last_weight else 0
+        },
+        'charts': {
+            'weight': {
+                'labels': [w.date.strftime('%Y-%m-%d') for w in weights],
+                'values': [w.weight for w in weights]
+            },
+            'water': {
+                'labels': date_range,
+                'values': [daily_water.get(date, 0) for date in date_range]
+            },
+            'exercise': {
+                'labels': date_range,
+                'values': exercise_values
+            },
+            'nutrition': {
+                'protein': total_protein,
+                'carbs': total_carbs,
+                'fat': total_fat
+            },
+            'exerciseTypes': exercise_types
+        }
+    })
 
 if __name__ == '__main__':
     with app.app_context():
