@@ -70,11 +70,6 @@
 <div class="profile-header">
     <div class="container">
         <div class="row align-items-center">
-            <div class="col-auto">
-                <img src="{{ url_for('static', filename='images/default-avatar.png') }}" 
-                     alt="Profile Photo" 
-                     class="profile-avatar">
-            </div>
             <div class="col">
                 <h1 class="mb-2">{{ current_user.username }}</h1>
                 <p class="mb-0">
@@ -95,12 +90,6 @@
                     <nav class="nav nav-pills flex-column">
                         <a class="nav-link active" href="#profile" data-bs-toggle="tab">
                             <i class="fas fa-user me-2"></i>Profile Information
-                        </a>
-                        <a class="nav-link" href="#goals" data-bs-toggle="tab">
-                            <i class="fas fa-bullseye me-2"></i>My Goals
-                        </a>
-                        <a class="nav-link" href="#reminders" data-bs-toggle="tab">
-                            <i class="fas fa-bell me-2"></i>Reminders
                         </a>
                         <a class="nav-link" href="#preferences" data-bs-toggle="tab">
                             <i class="fas fa-cog me-2"></i>Preferences
@@ -159,6 +148,7 @@
                                     <div class="col-md-6">
                                         <label class="form-label">Activity Level</label>
                                         <select class="form-select" name="activity_level">
+                                            <option value="">Select Activity Level</option>
                                             <option value="sedentary" {% if current_user.activity_level == 'sedentary' %}selected{% endif %}>
                                                 Sedentary (Desk job)
                                             </option>
@@ -181,40 +171,6 @@
                                     <i class="fas fa-save me-2"></i>Save Changes
                                 </button>
                             </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Goals -->
-                <div class="tab-pane fade" id="goals">
-                    <div class="card settings-card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="card-title mb-0">My Goals</h5>
-                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addGoalModal">
-                                    <i class="fas fa-plus me-2"></i>New Goal
-                                </button>
-                            </div>
-                            <div id="goalsList">
-                                <!-- Goals will be loaded via JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Reminders -->
-                <div class="tab-pane fade" id="reminders">
-                    <div class="card settings-card">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <h5 class="card-title mb-0">Reminders</h5>
-                                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addReminderModal">
-                                    <i class="fas fa-plus me-2"></i>New Reminder
-                                </button>
-                            </div>
-                            <div id="remindersList">
-                                <!-- Reminders will be loaded via JavaScript -->
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -360,24 +316,32 @@
 <script>
 $(document).ready(function() {
     // Profile form submission
-    $('#profileForm').submit(function(e) {
+    $('#profileForm').on('submit', function(e) {
         e.preventDefault();
+        
+        // Get form data
         const formData = {
             username: $('input[name="username"]').val(),
             email: $('input[name="email"]').val(),
-            height: parseInt($('input[name="height"]').val()),
+            height: parseFloat($('input[name="height"]').val()),
             birth_date: $('input[name="birth_date"]').val(),
             gender: $('select[name="gender"]').val(),
             activity_level: $('select[name="activity_level"]').val()
         };
 
+        // Send AJAX request
         $.ajax({
             url: '/api/profile',
             method: 'PUT',
             contentType: 'application/json',
             data: JSON.stringify(formData),
-            success: function() {
-                alert('Profile information updated');
+            success: function(response) {
+                alert('Profile updated successfully!');
+                location.reload(); // Reload the page to show updated values
+            },
+            error: function(xhr) {
+                const response = xhr.responseJSON;
+                alert(response.message || 'An error occurred while updating profile.');
             }
         });
     });

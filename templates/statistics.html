@@ -288,10 +288,12 @@ $(document).ready(function() {
                 updateWeightChart(weightChart, data.charts.weight);
                 updateWaterChart(waterChart, data.charts.water);
                 updateExerciseChart(exerciseChart, data.charts.exercise);
+                updateNutritionChart(nutritionChart, data.charts.nutrition);
                 updateExerciseTypesChart(exerciseTypesChart, data.charts.exerciseTypes);
             },
             error: function(xhr, status, error) {
                 console.error('Error loading statistics:', error);
+                console.error('Response:', xhr.responseText);  // Debug log
             }
         });
     }
@@ -308,67 +310,93 @@ $(document).ready(function() {
     }
 
     function updateWeightChart(chart, data) {
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.values;
+        if (!data || data.length === 0) {
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+        } else {
+            chart.data.labels = data.map(item => item.date);
+            chart.data.datasets[0].data = data.map(item => item.value);
+        }
         chart.update();
     }
 
     function updateWaterChart(chart, data) {
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.values;
+        if (!data || data.length === 0) {
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+        } else {
+            chart.data.labels = data.map(item => item.date);
+            chart.data.datasets[0].data = data.map(item => item.value);
+        }
         chart.update();
     }
 
     function updateExerciseChart(chart, data) {
-        chart.data.labels = data.labels;
-        chart.data.datasets[0].data = data.values;
+        if (!data || data.length === 0) {
+            chart.data.labels = [];
+            chart.data.datasets[0].data = [];
+        } else {
+            chart.data.labels = data.map(item => item.date);
+            chart.data.datasets[0].data = data.map(item => item.value);
+        }
         chart.update();
     }
 
     function updateNutritionChart(chart, data) {
-        const totalNutrition = (data.protein || 0) + (data.carbs || 0) + (data.fat || 0);
-        if (totalNutrition > 0) {
-            chart.data.datasets[0].data = [
-                data.protein || 0,
-                data.carbs || 0,
-                data.fat || 0
-            ];
-            chart.data.labels = [
-                `Protein (${Math.round(data.protein || 0)}g)`,
-                `Carbs (${Math.round(data.carbs || 0)}g)`,
-                `Fat (${Math.round(data.fat || 0)}g)`
-            ];
-            chart.data.datasets[0].backgroundColor = ['#0d6efd', '#198754', '#ffc107'];
-        } else {
+        if (!data || (!data.protein && !data.carbs && !data.fat)) {
             chart.data.datasets[0].data = [1];
             chart.data.labels = ['No nutrition data'];
             chart.data.datasets[0].backgroundColor = ['#6c757d'];
+        } else {
+            const protein = data.protein || 0;
+            const carbs = data.carbs || 0;
+            const fat = data.fat || 0;
+            
+            chart.data.datasets[0].data = [protein, carbs, fat];
+            chart.data.labels = [
+                `Protein (${Math.round(protein)}g)`,
+                `Carbs (${Math.round(carbs)}g)`,
+                `Fat (${Math.round(fat)}g)`
+            ];
+            chart.data.datasets[0].backgroundColor = ['#0d6efd', '#198754', '#ffc107'];
         }
         chart.update();
     }
 
     function updateExerciseTypesChart(chart, data) {
-        console.log("Updating exercise types chart with data:", data);  // Debug log
-        
+        if (!data) {
+            chart.data.datasets[0].data = [1];
+            chart.data.labels = ['No exercise data'];
+            chart.data.datasets[0].backgroundColor = ['#6c757d'];
+            chart.update();
+            return;
+        }
+
         const exerciseTypes = ['walking', 'running', 'cycling', 'swimming', 'gym', 'other'];
-        const labels = exerciseTypes.map(type => 
-            type.charAt(0).toUpperCase() + type.slice(1) + 
-            (data[type] > 0 ? ` (${data[type]} min)` : '')
-        );
-        
         const values = exerciseTypes.map(type => data[type] || 0);
-        const colors = [
-            'rgba(75, 192, 192, 0.8)',  // Walking - Teal
-            'rgba(255, 99, 132, 0.8)',  // Running - Pink
-            'rgba(54, 162, 235, 0.8)',  // Cycling - Blue
-            'rgba(153, 102, 255, 0.8)', // Swimming - Purple
-            'rgba(255, 159, 64, 0.8)',  // Gym - Orange
-            'rgba(201, 203, 207, 0.8)'  // Other - Gray
-        ];
-        
-        chart.data.labels = labels;
-        chart.data.datasets[0].data = values;
-        chart.data.datasets[0].backgroundColor = colors;
+        const totalExercise = values.reduce((a, b) => a + b, 0);
+
+        if (totalExercise === 0) {
+            chart.data.datasets[0].data = [1];
+            chart.data.labels = ['No exercise data'];
+            chart.data.datasets[0].backgroundColor = ['#6c757d'];
+        } else {
+            const labels = exerciseTypes.map(type => {
+                const duration = data[type] || 0;
+                return duration > 0 ? `${type.charAt(0).toUpperCase() + type.slice(1)} (${duration} min)` : type;
+            });
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = values;
+            chart.data.datasets[0].backgroundColor = [
+                '#4BC0C0', // Walking - Teal
+                '#FF6384', // Running - Pink
+                '#36A2EB', // Cycling - Blue
+                '#9966FF', // Swimming - Purple
+                '#FF9F40', // Gym - Orange
+                '#C9CBCF'  // Other - Gray
+            ];
+        }
         chart.update();
     }
 

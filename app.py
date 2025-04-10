@@ -1,37 +1,51 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, FloatField, SubmitField
-from wtforms.validators import DataRequired, Length, EqualTo
+from wtforms import StringField, PasswordField, FloatField, SubmitField, DateField, SelectField
+from wtforms.validators import DataRequired, Length, EqualTo, Email, Optional
 import json
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-super-secret-key-12345'  # Change this in production
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///health_tracker.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Database Models
 class User(UserMixin, db.Model):
+    __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
-    password_hash = db.Column(db.String(120), nullable=False)
-    height = db.Column(db.Float)
+    password = db.Column(db.String(120), nullable=False)
+    email = db.Column(db.String(120), unique=True)
+    height = db.Column(db.Float)  # in centimeters
+    birth_date = db.Column(db.Date)
+    gender = db.Column(db.String(20))
+    activity_level = db.Column(db.String(20))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    preferences = db.relationship('UserPreferences', backref='user', uselist=False)
     weights = db.relationship('Weight', backref='user', lazy=True)
     exercises = db.relationship('Exercise', backref='user', lazy=True)
     water_logs = db.relationship('WaterLog', backref='user', lazy=True)
     goals = db.relationship('Goals', backref='user', lazy=True)
     nutrition_logs = db.relationship('NutritionLog', backref='user', lazy=True)
 
+    def set_password(self, password):
+        self.password = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password, password)
+
 class Weight(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     weight = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 class Exercise(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -39,17 +53,17 @@ class Exercise(db.Model):
     duration = db.Column(db.Integer, nullable=False)  # in minutes
     calories = db.Column(db.Integer)
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 class WaterLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Integer, nullable=False)  # in ml
     date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
 class Goals(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     target_weight = db.Column(db.Float)
     target_exercise_minutes = db.Column(db.Integer)  # daily target
     target_water_ml = db.Column(db.Integer)  # daily target in ml
@@ -59,7 +73,7 @@ class Goals(db.Model):
 
 class NutritionLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     meal_type = db.Column(db.String(50), nullable=False)  # breakfast, lunch, dinner, snack
     food_name = db.Column(db.String(100), nullable=False)
     calories = db.Column(db.Integer, nullable=False)
@@ -70,11 +84,30 @@ class NutritionLog(db.Model):
     portion_size = db.Column(db.Float)  # in grams or ml
     notes = db.Column(db.String(200))
 
+class UserPreferences(db.Model):
+    __tablename__ = 'user_preferences'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    daily_water_goal = db.Column(db.Integer, default=2000)
+    daily_steps_goal = db.Column(db.Integer, default=10000)
+    theme = db.Column(db.String(20), default='light')
+
 class RegistrationForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=4, max=80)])
+    email = StringField('Email', validators=[DataRequired(), Email()])
     password = PasswordField('Password', validators=[DataRequired(), Length(min=6)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password')])
-    height = FloatField('Height (cm)', validators=[DataRequired()])
+    birth_date = DateField('Birth Date', validators=[Optional()])
+    gender = SelectField('Gender', choices=[('', 'Select Gender'), ('M', 'Male'), ('F', 'Female'), ('O', 'Other')], validators=[Optional()])
+    activity_level = SelectField('Activity Level', 
+        choices=[
+            ('', 'Select Activity Level'),
+            ('sedentary', 'Sedentary'),
+            ('lightly_active', 'Lightly Active'),
+            ('moderately_active', 'Moderately Active'),
+            ('very_active', 'Very Active'),
+            ('extra_active', 'Extra Active')
+        ], validators=[Optional()])
     submit = SubmitField('Register')
 
 @login_manager.user_loader
@@ -84,9 +117,9 @@ def load_user(user_id):
 # Home page
 @app.route('/')
 def index():
-    if current_user.is_authenticated:
-        return redirect(url_for('dashboard'))
-    return render_template('index.html')
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    return redirect(url_for('dashboard'))
 
 # Dashboard
 @app.route('/dashboard')
@@ -111,7 +144,7 @@ def dashboard():
 def login():
     if request.method == 'POST':
         user = User.query.filter_by(username=request.form.get('username')).first()
-        if user and check_password_hash(user.password_hash, request.form.get('password')):
+        if user and user.check_password(request.form.get('password')):
             login_user(user)
             return redirect(url_for('dashboard'))
         flash('Invalid username or password')
@@ -123,17 +156,23 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         if User.query.filter_by(username=form.username.data).first():
-            flash('Username already exists')
-            return redirect(url_for('register'))
-        
+            flash('Username already exists. Please choose a different one.', 'danger')
+            return render_template('register.html', form=form)
+        if User.query.filter_by(email=form.email.data).first():
+            flash('Email already registered. Please use a different email.', 'danger')
+            return render_template('register.html', form=form)
+            
         user = User(
             username=form.username.data,
-            password_hash=generate_password_hash(form.password.data),
-            height=form.height.data
+            email=form.email.data,
+            birth_date=form.birth_date.data,
+            gender=form.gender.data,
+            activity_level=form.activity_level.data
         )
+        user.set_password(form.password.data)
         db.session.add(user)
         db.session.commit()
-        flash('Registration successful! Please login.')
+        flash('Registration successful! Please log in.', 'success')
         return redirect(url_for('login'))
     return render_template('register.html', form=form)
 
@@ -286,6 +325,8 @@ def get_statistics():
     start_dt = datetime.strptime(start_date, '%Y-%m-%d')
     end_dt = datetime.strptime(end_date, '%Y-%m-%d') + timedelta(days=1)  # Include end date
     
+    print(f"Fetching statistics from {start_dt} to {end_dt}")  # Debug log
+    
     # Get records within date range
     weights = Weight.query.filter(
         Weight.user_id == current_user.id,
@@ -311,8 +352,10 @@ def get_statistics():
         NutritionLog.date < end_dt
     ).order_by(NutritionLog.date).all()
     
+    print(f"Found records: {len(weights)} weights, {len(exercises)} exercises, {len(water_logs)} water logs, {len(nutrition_logs)} nutrition logs")  # Debug log
+    
     # Calculate daily averages
-    total_days = (end_dt - start_dt).days
+    total_days = max((end_dt - start_dt).days, 1)  # Avoid division by zero
     avg_calories = sum(log.calories for log in nutrition_logs) / total_days if nutrition_logs else 0
     avg_water = sum(log.amount for log in water_logs) / total_days if water_logs else 0
     avg_exercise = sum(ex.duration for ex in exercises) / total_days if exercises else 0
@@ -320,7 +363,7 @@ def get_statistics():
     # Calculate weight change
     first_weight = weights[0].weight if weights else None
     last_weight = weights[-1].weight if weights else None
-    weight_change = last_weight - first_weight if first_weight and last_weight else 0
+    weight_change = round(last_weight - first_weight, 1) if first_weight and last_weight else 0
     
     # Calculate trends (compare with previous period)
     prev_start = start_dt - timedelta(days=total_days)
@@ -339,10 +382,10 @@ def get_statistics():
     prev_nutrition = NutritionLog.query.filter(
         NutritionLog.user_id == current_user.id,
         NutritionLog.date >= prev_start, 
-        WaterLog.date < start_dt
+        NutritionLog.date < start_dt
     ).all()
     
-    # Exercise types data
+    # Aggregate exercise types
     exercise_types = {
         'walking': 0,
         'running': 0,
@@ -360,7 +403,39 @@ def get_statistics():
         else:
             exercise_types['other'] += exercise.duration
     
-    return jsonify({
+    # Aggregate nutrition data by day
+    nutrition_by_day = {}
+    for log in nutrition_logs:
+        day = log.date.strftime('%Y-%m-%d')
+        if day not in nutrition_by_day:
+            nutrition_by_day[day] = {
+                'calories': 0,
+                'protein': 0,
+                'carbs': 0,
+                'fat': 0
+            }
+        nutrition_by_day[day]['calories'] += log.calories
+        nutrition_by_day[day]['protein'] += log.protein or 0
+        nutrition_by_day[day]['carbs'] += log.carbs or 0
+        nutrition_by_day[day]['fat'] += log.fat or 0
+    
+    # Aggregate water data by day
+    water_by_day = {}
+    for log in water_logs:
+        day = log.date.strftime('%Y-%m-%d')
+        if day not in water_by_day:
+            water_by_day[day] = 0
+        water_by_day[day] += log.amount
+    
+    # Aggregate exercise data by day
+    exercise_by_day = {}
+    for ex in exercises:
+        day = ex.date.strftime('%Y-%m-%d')
+        if day not in exercise_by_day:
+            exercise_by_day[day] = 0
+        exercise_by_day[day] += ex.duration
+    
+    response_data = {
         'averages': {
             'calories': round(avg_calories, 1),
             'water': round(avg_water, 1),
@@ -369,7 +444,7 @@ def get_statistics():
         'weight': {
             'start': first_weight,
             'end': last_weight,
-            'change': round(weight_change, 1) if weight_change else 0
+            'change': weight_change
         },
         'trends': {
             'calories': calculate_trend(nutrition_logs, prev_nutrition, 'calories'),
@@ -379,8 +454,8 @@ def get_statistics():
         },
         'charts': {
             'weight': [{'date': w.date.strftime('%Y-%m-%d'), 'value': w.weight} for w in weights],
-            'water': [{'date': w.date.strftime('%Y-%m-%d'), 'value': w.amount} for w in water_logs],
-            'exercise': [{'date': e.date.strftime('%Y-%m-%d'), 'value': e.duration} for e in exercises],
+            'water': [{'date': date, 'value': amount} for date, amount in water_by_day.items()],
+            'exercise': [{'date': date, 'value': duration} for date, duration in exercise_by_day.items()],
             'nutrition': {
                 'protein': sum(n.protein or 0 for n in nutrition_logs),
                 'carbs': sum(n.carbs or 0 for n in nutrition_logs),
@@ -388,55 +463,75 @@ def get_statistics():
             },
             'exerciseTypes': exercise_types
         }
-    })
+    }
+    
+    print("Response data:", response_data)  # Debug log
+    return jsonify(response_data)
 
 @app.route('/api/goals', methods=['POST'])
 @login_required
 def create_goal():
     data = request.get_json()
+    print("Received goal data:", data)  # Debug log
     
-    # Deactivate any existing active goals
-    active_goals = Goals.query.filter_by(user_id=current_user.id, active=True).all()
-    for goal in active_goals:
-        goal.active = False
-    
-    new_goal = Goals(
-        user_id=current_user.id,
-        target_weight=data.get('target_weight'),
-        target_exercise_minutes=data.get('target_exercise_minutes'),
-        target_water_ml=data.get('target_water_ml'),
-        start_date=datetime.now(),
-        target_date=datetime.strptime(data['target_date'], '%Y-%m-%d'),
-        active=True
-    )
-    
-    db.session.add(new_goal)
-    db.session.commit()
-    flash('New goal set successfully!', 'goal')
-    
-    return jsonify({
-        'id': new_goal.id,
-        'target_weight': new_goal.target_weight,
-        'target_exercise_minutes': new_goal.target_exercise_minutes,
-        'target_water_ml': new_goal.target_water_ml,
-        'start_date': new_goal.start_date.strftime('%Y-%m-%d'),
-        'target_date': new_goal.target_date.strftime('%Y-%m-%d'),
-        'active': new_goal.active
-    }), 201
+    try:
+        # Deactivate any existing active goals
+        active_goals = Goals.query.filter_by(user_id=current_user.id, active=True).all()
+        for goal in active_goals:
+            goal.active = False
+        
+        new_goal = Goals(
+            user_id=current_user.id,
+            target_weight=data.get('target_weight'),
+            target_exercise_minutes=data.get('target_exercise_minutes'),
+            target_water_ml=data.get('target_water_ml'),
+            start_date=datetime.now(),
+            target_date=datetime.strptime(data['target_date'], '%Y-%m-%d'),
+            active=True
+        )
+        
+        db.session.add(new_goal)
+        db.session.commit()
+        
+        response_data = {
+            'id': new_goal.id,
+            'target_weight': new_goal.target_weight,
+            'target_exercise_minutes': new_goal.target_exercise_minutes,
+            'target_water_ml': new_goal.target_water_ml,
+            'start_date': new_goal.start_date.strftime('%Y-%m-%d'),
+            'target_date': new_goal.target_date.strftime('%Y-%m-%d'),
+            'active': new_goal.active
+        }
+        print("Created goal:", response_data)  # Debug log
+        
+        flash('New goal set successfully!', 'goal')
+        return jsonify(response_data), 201
+        
+    except Exception as e:
+        print("Error creating goal:", str(e))  # Debug log
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/api/goals/active')
 @login_required
 def get_active_goals():
-    goals = Goals.query.filter_by(user_id=current_user.id, active=True).all()
-    return jsonify([{
-        'id': goal.id,
-        'target_weight': goal.target_weight,
-        'target_exercise_minutes': goal.target_exercise_minutes,
-        'target_water_ml': goal.target_water_ml,
-        'start_date': goal.start_date.strftime('%Y-%m-%d'),
-        'target_date': goal.target_date.strftime('%Y-%m-%d'),
-        'active': goal.active
-    } for goal in goals])
+    try:
+        goals = Goals.query.filter_by(user_id=current_user.id, active=True).all()
+        response_data = [{
+            'id': goal.id,
+            'target_weight': goal.target_weight,
+            'target_exercise_minutes': goal.target_exercise_minutes,
+            'target_water_ml': goal.target_water_ml,
+            'start_date': goal.start_date.strftime('%Y-%m-%d'),
+            'target_date': goal.target_date.strftime('%Y-%m-%d'),
+            'active': goal.active
+        } for goal in goals]
+        print("Retrieved active goals:", response_data)  # Debug log
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print("Error retrieving active goals:", str(e))  # Debug log
+        return jsonify({'message': str(e)}), 500
 
 @app.route('/api/goals/<int:goal_id>', methods=['PUT'])
 @login_required
@@ -870,6 +965,147 @@ def get_health_report():
 @login_required
 def statistics():
     return render_template('statistics.html')
+
+@app.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html')
+
+@app.route('/api/profile', methods=['GET'])
+@login_required
+def get_profile():
+    return jsonify({
+        'username': current_user.username,
+        'email': current_user.email,
+        'height': current_user.height,
+        'birth_date': current_user.birth_date.strftime('%Y-%m-%d') if current_user.birth_date else None,
+        'gender': current_user.gender,
+        'activity_level': current_user.activity_level,
+        'created_at': current_user.created_at.strftime('%Y-%m-%d')
+    })
+
+@app.route('/api/profile', methods=['PUT'])
+@login_required
+def update_profile():
+    try:
+        data = request.get_json()
+        
+        # Check if username is being changed and is unique
+        if 'username' in data and data['username'] != current_user.username:
+            if User.query.filter_by(username=data['username']).first():
+                return jsonify({'message': 'Username already exists'}), 400
+            current_user.username = data['username']
+        
+        # Check if email is being changed and is unique
+        if 'email' in data and data['email'] != current_user.email:
+            if User.query.filter_by(email=data['email']).first():
+                return jsonify({'message': 'Email already exists'}), 400
+            current_user.email = data['email']
+        
+        if 'height' in data:
+            current_user.height = data['height']
+        if 'birth_date' in data:
+            current_user.birth_date = datetime.strptime(data['birth_date'], '%Y-%m-%d').date()
+        if 'gender' in data:
+            current_user.gender = data['gender']
+        if 'activity_level' in data:
+            current_user.activity_level = data['activity_level']
+        
+        db.session.commit()
+        return jsonify({'message': 'Profile updated successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/preferences', methods=['GET'])
+@login_required
+def get_preferences():
+    prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+    if not prefs:
+        prefs = UserPreferences(user_id=current_user.id)
+        db.session.add(prefs)
+        db.session.commit()
+    
+    return jsonify({
+        'daily_water_goal': prefs.daily_water_goal,
+        'daily_steps_goal': prefs.daily_steps_goal,
+        'theme': prefs.theme
+    })
+
+@app.route('/api/preferences', methods=['PUT'])
+@login_required
+def update_preferences():
+    try:
+        data = request.get_json()
+        prefs = UserPreferences.query.filter_by(user_id=current_user.id).first()
+        
+        if not prefs:
+            prefs = UserPreferences(user_id=current_user.id)
+            db.session.add(prefs)
+        
+        if 'daily_water_goal' in data:
+            prefs.daily_water_goal = data['daily_water_goal']
+        if 'daily_steps_goal' in data:
+            prefs.daily_steps_goal = data['daily_steps_goal']
+        if 'theme' in data:
+            prefs.theme = data['theme']
+        
+        db.session.commit()
+        return jsonify({'message': 'Preferences updated successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/change-password', methods=['POST'])
+@login_required
+def change_password():
+    try:
+        data = request.get_json()
+        
+        if not user.check_password(data['current_password']):
+            return jsonify({'message': 'Current password is incorrect'}), 400
+        
+        if len(data['new_password']) < 6:
+            return jsonify({'message': 'New password must be at least 6 characters long'}), 400
+        
+        user.set_password(data['new_password'])
+        db.session.commit()
+        
+        return jsonify({'message': 'Password changed successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
+
+@app.route('/api/delete-account', methods=['POST'])
+@login_required
+def delete_account():
+    try:
+        data = request.get_json()
+        
+        if not user.check_password(data['password']):
+            return jsonify({'message': 'Password is incorrect'}), 400
+        
+        # Delete all related records
+        Weight.query.filter_by(user_id=user.id).delete()
+        Exercise.query.filter_by(user_id=user.id).delete()
+        WaterLog.query.filter_by(user_id=user.id).delete()
+        Goals.query.filter_by(user_id=user.id).delete()
+        NutritionLog.query.filter_by(user_id=user.id).delete()
+        UserPreferences.query.filter_by(user_id=user.id).delete()
+        
+        # Delete user
+        db.session.delete(user)
+        db.session.commit()
+        
+        logout_user()
+        return jsonify({'message': 'Account deleted successfully'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'message': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():
